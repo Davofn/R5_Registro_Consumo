@@ -11,22 +11,38 @@ function clamp(n, min, max){
 
 function fmtNum(n, digits=2){
   if (!Number.isFinite(n)) return "—";
-  return new Intl.NumberFormat("es-ES", { maximumFractionDigits: digits, minimumFractionDigits: digits }).format(n);
+  return new Intl.NumberFormat("es-ES", {
+    maximumFractionDigits: digits,
+    minimumFractionDigits: digits
+  }).format(n);
 }
+
 function fmtKwh(n){ return Number.isFinite(n) ? `${fmtNum(n,2)} kWh` : "—"; }
 function fmtKm(n){ return Number.isFinite(n) ? `${fmtNum(n,1)} km` : "—"; }
 function fmtAvg(n){ return Number.isFinite(n) ? `${fmtNum(n,1)} kWh/100km` : "—"; }
+
 function fmtEUR(n){
   if (!Number.isFinite(n)) return "—";
   return new Intl.NumberFormat("es-ES", { style:"currency", currency:"EUR" }).format(n);
 }
 
-function getHistory(){ return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]"); }
-function saveHistory(arr){ localStorage.setItem(STORAGE_KEY, JSON.stringify(arr)); }
+function getHistory(){
+  return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+}
+
+function saveHistory(arr){
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(arr));
+}
+
+function setMessage(text){
+  const el = $("msg");
+  if (el) el.textContent = text || "";
+}
 
 function computeCurrent(){
   const kmStart = parseFloat($("kmStart").value);
   const kmEnd = parseFloat($("kmEnd").value);
+
   const socStart = clamp(parseFloat($("socStart").value), 0, 100);
   const socEnd = clamp(parseFloat($("socEnd").value), 0, 100);
 
@@ -36,7 +52,10 @@ function computeCurrent(){
   const kmTrip = (Number.isFinite(kmStart) && Number.isFinite(kmEnd)) ? (kmEnd - kmStart) : NaN;
   const socUsed = socStart - socEnd;
   const kwhUsed = (Number.isFinite(socUsed) ? Math.max(0, socUsed) : NaN) / 100 * BATTERY_KWH;
-  const avg = (Number.isFinite(kmTrip) && kmTrip > 0 && Number.isFinite(kwhUsed)) ? (kwhUsed / kmTrip) * 100 : NaN;
+
+  const avg = (Number.isFinite(kmTrip) && kmTrip > 0 && Number.isFinite(kwhUsed))
+    ? (kwhUsed / kmTrip) * 100
+    : NaN;
 
   const price = Math.max(0, parseFloat($("price").value));
   const cost = Number.isFinite(kwhUsed) ? (kwhUsed * price) : NaN;
@@ -49,19 +68,52 @@ function computeCurrent(){
   return { kmStart, kmEnd, kmTrip, socStart, socEnd, socUsed, kwhUsed, avg, price, cost };
 }
 
-function setMessage(text){ $("msg").textContent = text || ""; }
+function applyPriceUI(){
+  const external = $("externalCharge")?.checked;
+  const priceInput = $("price");
+  if (!priceInput) return;
+
+  if (!external){
+    priceInput.value = DEFAULT_HOME_PRICE.toString();
+    priceInput.disabled = true;
+  } else {
+    if (priceInput.disabled){
+      priceInput.value = "0.45";
+    }
+    priceInput.disabled = false;
+  }
+}
 
 function renderHistory(){
-  const tbody = $("historyTable").querySelector("tbody");
+  const table = $("historyTable");
+  if (!table) return;
+  const tbody = table.querySelector("tbody");
+  if (!tbody) return;
+
   tbody.innerHTML = "";
+
   const history = getHistory();
 
-  let totalKm = 0, totalKwh = 0, totalCost = 0;
+  let totalKm = 0;
+  let totalKwh = 0;
+  let totalCost = 0;
+
+  // Acumuladores por tipo (ponderado por km)
+  const byType = {
+    "Ciudad": { km: 0, kwh: 0 },
+    "Mixto": { km: 0, kwh: 0 },
+    "Autopista": { km: 0, kwh: 0 }
+  };
 
   history.forEach(e => {
     totalKm += e.kmTrip;
     totalKwh += e.kwhUsed;
     totalCost += e.cost;
+
+    if (byType[e.tripType]) {
+      byType[e.tripType].km += e.kmTrip;
+      byType[e.tripType].kwh += e.kwhUsed;
+    }
 
     const tr = document.createElement("tr");
     tr.innerHTML = `
@@ -79,70 +131,238 @@ function renderHistory(){
 
   const globalAvg = totalKm > 0 ? (totalKwh / totalKm) * 100 : NaN;
 
-  $("totalKm").textContent = fmtKm(totalKm);
-  $("totalKwh").textContent = fmtKwh(totalKwh);
-  $("globalAvg").textContent = fmtAvg(globalAvg);
-  $("totalCost").textContent = fmtEUR(totalCost);
+  const avgCity = byType["Ciudad"].km > 0 ? (byType["Ciudad"].kwh / byType["Ciudad"].km) * 100 : NaN;
+  const avgMixed = byType["Mixto"].km > 0 ? (byType["Mixto"].kwh / byType["Mixto"].km) * 100 : NaN;
+  const avgHighway = byType["Autopista"].km > 0 ? (byType["Autopista"].kwh / byType["Autopista"].km) * 100 : NaN;
+
+  if ($("totalKm")) $("totalKm").textContent = fmtKm(totalKm);
+  if ($("totalKwh")) $("totalKwh").textContent = fmtKwh(totalKwh);
+  if ($("globalAvg")) $("globalAvg").textContent = fmtAvg(globalAvg);
+  if ($("totalCost")) $("totalCost").textContent = fmtEUR(totalCost);
+
+  if ($("avgCity")) $("avgCity").textContent = fmtAvg(avgCity);
+  if ($("avgMixed")) $("avgMixed").textContent = fmtAvg(avgMixed);
+  if ($("avgHighway")) $("avgHighway").textContent = fmtAvg(avgHighway);
+}
+
+// CSV escaping
+function csvEsc(v){
+  const s = String(v ?? "");
+  if (/[",\n]/.test(s)) return '"' + s.replace(/"/g,'""') + '"';
+  return s;
 }
 
 function exportCSV(){
   const h = getHistory();
-  if (!h.length){ setMessage("No hay datos para exportar."); return; }
+  if (!h.length){
+    setMessage("No hay datos para exportar.");
+    return;
+  }
 
-  const headers = ["Fecha","Tipo","Km inicio","Km fin","Km","% inicio","% final","% usado","kWh","kWh/100km","Carga exterior","Precio €/kWh","Coste €","Notas"];
-  const esc = (v) => {
-    const s = String(v ?? "");
-    if (/[",\n]/.test(s)) return '"' + s.replace(/"/g,'""') + '"';
-    return s;
-  };
+  const headers = [
+    "Fecha","Tipo","Km inicio","Km fin","Km",
+    "% inicio","% final","% usado",
+    "kWh","kWh/100km",
+    "Carga exterior","Precio €/kWh","Coste €","Notas"
+  ];
 
-  const rows = h.map(e => [
-    e.date, e.tripType, e.kmStart, e.kmEnd, e.kmTrip.toFixed(1),
-    e.socStart, e.socEnd, e.socUsed,
-    e.kwhUsed.toFixed(2), e.avg.toFixed(1),
+  const rows = h.map(e => ([
+    e.date,
+    e.tripType,
+    e.kmStart,
+    e.kmEnd,
+    Number(e.kmTrip).toFixed(1),
+    e.socStart,
+    e.socEnd,
+    e.socUsed,
+    Number(e.kwhUsed).toFixed(2),
+    Number(e.avg).toFixed(1),
     e.external ? "Sí" : "No",
-    e.price.toFixed(4), e.cost.toFixed(2),
+    Number(e.price).toFixed(4),
+    Number(e.cost).toFixed(2),
     e.notes || ""
-  ].map(esc).join(","));
+  ].map(csvEsc).join(",")));
 
   const csv = headers.join(",") + "\n" + rows.join("\n") + "\n";
   const blob = new Blob([csv], {type:"text/csv;charset=utf-8"});
   const url = URL.createObjectURL(blob);
+
   const a = document.createElement("a");
   a.href = url;
   a.download = "r5_consumo_log.csv";
   a.click();
+
   URL.revokeObjectURL(url);
   setMessage("CSV exportado.");
 }
 
-function applyPriceUI(){
-  const external = $("externalCharge").checked;
-  const priceInput = $("price");
-  if (!external){
-    priceInput.value = DEFAULT_HOME_PRICE.toString();
-    priceInput.disabled = true;
-  } else {
-    if (priceInput.disabled) priceInput.value = "0.45";
-    priceInput.disabled = false;
+// ===== Importar CSV =====
+
+// Parser CSV con soporte de comillas y comas dentro de campos
+function parseCSV(text){
+  const rows = [];
+  let row = [];
+  let cur = "";
+  let inQuotes = false;
+
+  for (let i = 0; i < text.length; i++){
+    const ch = text[i];
+
+    if (inQuotes){
+      if (ch === '"'){
+        if (text[i + 1] === '"'){
+          cur += '"';
+          i++;
+        } else {
+          inQuotes = false;
+        }
+      } else {
+        cur += ch;
+      }
+    } else {
+      if (ch === '"'){
+        inQuotes = true;
+      } else if (ch === ","){
+        row.push(cur);
+        cur = "";
+      } else if (ch === "\n"){
+        row.push(cur);
+        rows.push(row);
+        row = [];
+        cur = "";
+      } else if (ch === "\r"){
+        // ignore
+      } else {
+        cur += ch;
+      }
+    }
   }
+
+  if (cur.length > 0 || row.length > 0){
+    row.push(cur);
+    rows.push(row);
+  }
+
+  return rows;
+}
+
+// Clave estable para detectar duplicados al importar
+function entryKey(e){
+  return [
+    e.date, e.tripType,
+    Number(e.kmStart).toFixed(1),
+    Number(e.kmEnd).toFixed(1),
+    Number(e.socStart).toFixed(0),
+    Number(e.socEnd).toFixed(0)
+  ].join("|");
+}
+
+function importCSVFile(file){
+  const reader = new FileReader();
+
+  reader.onload = (ev) => {
+    const text = String(ev.target.result || "").trim();
+    if (!text){
+      setMessage("El CSV está vacío.");
+      return;
+    }
+
+    const rows = parseCSV(text);
+    if (rows.length < 2){
+      setMessage("CSV sin datos (solo cabecera).");
+      return;
+    }
+
+    const replace = $("replaceOnImport")?.checked;
+
+    let history = replace ? [] : getHistory();
+    const existing = new Set(history.map(entryKey));
+
+    let imported = 0;
+    let skipped = 0;
+
+    for (let r = 1; r < rows.length; r++){
+      const cols = rows[r];
+      if (!cols || cols.length < 10) continue;
+
+      const date = (cols[0] || "").trim();
+      const tripType = (cols[1] || "").trim() || "Mixto";
+      const kmStart = parseFloat(cols[2]);
+      const kmEnd = parseFloat(cols[3]);
+      const kmTrip = parseFloat(cols[4]);
+      const socStart = parseFloat(cols[5]);
+      const socEnd = parseFloat(cols[6]);
+      const socUsed = parseFloat(cols[7]);
+      const kwhUsed = parseFloat(cols[8]);
+      const avg = parseFloat(cols[9]);
+      const external = (cols[10] || "").trim().toLowerCase() === "sí";
+      const price = parseFloat(cols[11]);
+      const cost = parseFloat(cols[12]);
+      const notes = (cols[13] || "").trim();
+
+      if (!date || !Number.isFinite(kmStart) || !Number.isFinite(kmEnd) || !Number.isFinite(kmTrip)) continue;
+
+      const entry = {
+        date,
+        tripType,
+        kmStart,
+        kmEnd,
+        kmTrip,
+        socStart: Number.isFinite(socStart) ? socStart : 0,
+        socEnd: Number.isFinite(socEnd) ? socEnd : 0,
+        socUsed: Number.isFinite(socUsed) ? socUsed : 0,
+        kwhUsed: Number.isFinite(kwhUsed) ? kwhUsed : 0,
+        avg: Number.isFinite(avg) ? avg : 0,
+        external,
+        price: Number.isFinite(price) ? price : DEFAULT_HOME_PRICE,
+        cost: Number.isFinite(cost) ? cost : 0,
+        notes
+      };
+
+      const key = entryKey(entry);
+      if (existing.has(key)){
+        skipped++;
+        continue;
+      }
+
+      existing.add(key);
+      history.push(entry);
+      imported++;
+    }
+
+    saveHistory(history);
+    renderHistory();
+
+    setMessage(
+      replace
+        ? `Importación completada (reemplazado). Importados: ${imported}.`
+        : `Importación completada. Importados: ${imported}. Duplicados omitidos: ${skipped}.`
+    );
+  };
+
+  reader.readAsText(file, "utf-8");
 }
 
 function saveTrip(){
   const c = computeCurrent();
 
   if (!Number.isFinite(c.kmStart) || !Number.isFinite(c.kmEnd)){
-    setMessage("Rellena Km inicio y Km fin."); return;
+    setMessage("Rellena Km inicio y Km fin.");
+    return;
   }
   if (c.kmTrip <= 0){
-    setMessage("Km fin debe ser mayor que Km inicio."); return;
+    setMessage("Km fin debe ser mayor que Km inicio.");
+    return;
   }
   if (c.socStart < c.socEnd){
-    setMessage("% inicio no puede ser menor que % final."); return;
+    setMessage("% inicio no puede ser menor que % final.");
+    return;
   }
 
   const dateInput = $("date").value;
-  const date = dateInput ? dateInput.split("-").reverse().join("/") : new Date().toLocaleDateString("es-ES");
+  const date = dateInput
+    ? dateInput.split("-").reverse().join("/")
+    : new Date().toLocaleDateString("es-ES");
 
   const entry = {
     date,
@@ -155,7 +375,7 @@ function saveTrip(){
     socUsed: Math.max(0, c.socUsed),
     kwhUsed: c.kwhUsed,
     avg: c.avg,
-    external: $("externalCharge").checked,
+    external: $("externalCharge")?.checked || false,
     price: c.price,
     cost: c.cost,
     notes: $("notes").value.trim()
@@ -166,7 +386,7 @@ function saveTrip(){
   saveHistory(history);
   renderHistory();
 
-  // ✅ tu UX: km fin → siguiente km inicio
+  // UX: el siguiente trayecto empieza con el Km fin anterior
   $("kmStart").value = c.kmEnd;
   $("kmEnd").value = "";
   $("notes").value = "";
@@ -182,27 +402,46 @@ function clearHistory(){
 }
 
 function init(){
+  // Fecha por defecto: hoy
   const today = new Date();
   const yyyy = today.getFullYear();
   const mm = String(today.getMonth()+1).padStart(2,"0");
   const dd = String(today.getDate()).padStart(2,"0");
-  $("date").value = `${yyyy}-${mm}-${dd}`;
+  if ($("date")) $("date").value = `${yyyy}-${mm}-${dd}`;
 
   applyPriceUI();
   computeCurrent();
   renderHistory();
 
   ["kmStart","kmEnd","socStart","socEnd","notes","tripType","date"].forEach(id => {
+    if (!$(id)) return;
     $(id).addEventListener("input", computeCurrent);
     $(id).addEventListener("change", computeCurrent);
   });
 
-  $("externalCharge").addEventListener("change", () => { applyPriceUI(); computeCurrent(); });
-  $("price").addEventListener("input", computeCurrent);
+  if ($("externalCharge")){
+    $("externalCharge").addEventListener("change", () => {
+      applyPriceUI();
+      computeCurrent();
+    });
+  }
 
-  $("saveTrip").addEventListener("click", saveTrip);
-  $("exportCSV").addEventListener("click", exportCSV);
-  $("clearHistory").addEventListener("click", clearHistory);
+  if ($("price")) $("price").addEventListener("input", computeCurrent);
+
+  if ($("saveTrip")) $("saveTrip").addEventListener("click", saveTrip);
+  if ($("exportCSV")) $("exportCSV").addEventListener("click", exportCSV);
+  if ($("clearHistory")) $("clearHistory").addEventListener("click", clearHistory);
+
+  // Import CSV hooks
+  if ($("importCSV") && $("csvFile")){
+    $("importCSV").addEventListener("click", () => $("csvFile").click());
+    $("csvFile").addEventListener("change", (e) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      importCSVFile(file);
+      e.target.value = ""; // permite reimportar el mismo archivo
+    });
+  }
 
   if ("serviceWorker" in navigator){
     navigator.serviceWorker.register("./service-worker.js").catch(()=>{});
