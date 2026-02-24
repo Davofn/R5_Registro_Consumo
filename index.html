@@ -110,6 +110,14 @@
         <button id="saveTrip" class="primary">Guardar trayecto</button>
         <button id="exportCSV">Exportar CSV</button>
         <button id="clearHistory" class="danger">Limpiar histórico</button>
+		<button id="importCSV">Importar CSV</button>
+
+<label class="checkbox" style="margin-left:auto;">
+  <input id="replaceOnImport" type="checkbox" />
+  <span>Reemplazar al importar</span>
+</label>
+
+<input type="file" id="csvFile" accept=".csv,text/csv" hidden>
       </div>
 
       <p class="hint" id="msg" aria-live="polite"></p>
