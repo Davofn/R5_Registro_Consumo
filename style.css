@@ -38,3 +38,75 @@ th,td{padding:10px 8px;border-bottom:1px solid rgba(255,255,255,.08);vertical-al
 th{text-align:left;color:var(--muted);font-weight:600}
 .footer{max-width:980px;margin:0 auto;padding:10px 16px 30px;color:var(--muted);font-size:12px}
 @media (min-width:820px){h1{font-size:18px}.grid{grid-template-columns:repeat(4,minmax(0,1fr))}.computed{grid-template-columns:repeat(4,minmax(0,1fr))}.summary{grid-template-columns:1fr 1fr 1fr 1fr}}
+/* === Look & feel CompaCarga (coherencia visual) === */
+
+/* Fondo con radiales tipo CompaCarga */
+body{
+  background:
+    radial-gradient(1200px 600px at 20% -10%, rgba(255,212,0,.12), transparent 55%),
+    radial-gradient(900px 600px at 90% 10%, rgba(120,200,255,.10), transparent 55%),
+    #0f1115;
+}
+
+/* Hero estilo CompaCarga */
+.hero{
+  padding-top: 14px;
+}
+
+.hero-card{
+  position: relative;
+  overflow: hidden;
+  border-radius: 22px;
+  border: 1px solid rgba(255,255,255,.10);
+  box-shadow: 0 10px 30px rgba(0,0,0,.35);
+  padding: 18px 18px;
+  min-height: 130px;
+
+  /* Degradado amarillo -> negro */
+  background: linear-gradient(135deg,
+    rgba(255,212,0,.95) 0%,
+    rgba(255,212,0,.35) 18%,
+    rgba(23,26,33,.95) 55%,
+    rgba(15,17,21,1) 100%
+  );
+}
+
+.hero-text{
+  max-width: 520px;
+  color: #0f1115;
+}
+
+.hero-text h2{
+  margin: 0 0 6px 0;
+  font-size: 18px;
+  letter-spacing: .2px;
+}
+
+.hero-text p{
+  margin: 0;
+  font-size: 13px;
+  opacity: .9;
+}
+
+/* Imagen R5 a la derecha, integrada */
+.hero-car{
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: min(380px, 46vw);
+  height: auto;
+  filter: drop-shadow(0 18px 30px rgba(0,0,0,.45));
+  opacity: .95;
+  pointer-events: none;
+}
+
+/* En móvil: que no tape el texto */
+@media (max-width: 520px){
+  .hero-text{ max-width: 70%; }
+  .hero-car{
+    width: 56vw;
+    right: -10px;
+    opacity: .85;
+  }
+}
