@@ -48,61 +48,65 @@ body{
     #0f1115;
 }
 
-/* HERO estilo CompaCarga (oscuro, texto blanco, degradado sutil) */
-.hero{ padding-top: 14px; }
-
-.hero-card{
+.hero{
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 10px 16px 0;
+}
+.hero-inner{
   position: relative;
-  overflow: hidden;
+  overflow:hidden;
   border-radius: 22px;
-  border: 1px solid rgba(255,255,255,.10);
-  box-shadow: 0 10px 30px rgba(0,0,0,.35);
-  padding: 22px 22px;
-  min-height: 150px;
-
-  /* 🔥 Igual que Cargadores: oscuro con “halo” amarillo a la izquierda */
+  border: 1px solid rgba(255,255,255,.08);
   background:
-    radial-gradient(700px 260px at 0% 50%, rgba(255,212,0,.22), transparent 60%),
-    linear-gradient(135deg, rgba(23,26,33,.96) 0%, rgba(15,17,21,1) 70%);
+    radial-gradient(800px 320px at 10% 20%, rgba(255,212,0,.14), transparent 60%),
+    radial-gradient(700px 420px at 90% 0%, rgba(120,200,255,.10), transparent 60%),
+    rgba(23,26,33,.92);
+  box-shadow: var(--shadow);
+  padding: 14px 14px 6px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap: 14px;
 }
-
-.hero-text{
-  max-width: 520px;
-  color: #eef2ff; /* blanco suave */
+.hero-copy h2{
+  margin:0;
+  font-size:14px;
+  letter-spacing:.2px;
 }
-
-.hero-title{
-  margin: 0 0 6px 0;
-  font-size: 18px;
-  letter-spacing: .2px;
-  font-weight: 700;
+.hero-copy p{
+  margin:6px 0 0;
+  color: var(--muted);
+  font-size:12px;
 }
-
-.hero-sub{
-  margin: 0;
-  font-size: 13px;
-  color: rgba(238,242,255,.78);
-}
-
-/* Coche “flotando” como en Cargadores */
 .hero-car{
-  position: absolute;
-  right: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: min(420px, 48vw);
-  height: auto;
-  filter: drop-shadow(0 18px 30px rgba(0,0,0,.55));
-  opacity: .98;
-  pointer-events: none;
+  width: 180px;
+  max-width: 42%;
+  height:auto;
+  opacity:.95;
+  transform: translateY(6px);
+  filter: drop-shadow(0 18px 35px rgba(0,0,0,.5));
 }
 
-/* Móvil: que no tape el texto */
-@media (max-width: 520px){
-  .hero-text{ max-width: 72%; }
-  .hero-car{
-    width: 62vw;
-    right: -18px;
-    opacity: .9;
+@media (min-width: 820px){
+  .hero-copy h2{font-size:16px}
+  .hero-car{width: 320px; max-width: 52%}
+}
+/* 3 pills centradas debajo del resumen principal */
+.summary-3{
+  justify-items: center;
+}
+
+.summary-3 .pill{
+  width: 100%;
+  max-width: 360px;
+}
+
+@media (min-width: 820px){
+  .summary-3{
+    grid-template-columns: 1fr 1fr 1fr;
+  }
+  .summary-3 .pill{
+    max-width: none;
   }
 }
