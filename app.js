@@ -77,11 +77,28 @@ function applyPriceUI(){
     priceInput.value = DEFAULT_HOME_PRICE.toString();
     priceInput.disabled = true;
   } else {
-    if (priceInput.disabled){
-      priceInput.value = "0.45";
-    }
+    if (priceInput.disabled) priceInput.value = "0.45";
     priceInput.disabled = false;
   }
+}
+
+// ===== filtros =====
+function getFilteredHistory(all){
+  const type = $("filterType")?.value || "Todos";
+  const extras = $("filterExtras")?.value || "Todos";
+
+  return all.filter(e => {
+    if (type !== "Todos" && e.tripType !== type) return false;
+
+    const hasClimate = e.climate === "Sí";
+    const hasSeats = e.seatsHeat === "Sí";
+
+    if (extras === "Clima" && !hasClimate) return false;
+    if (extras === "Asientos" && !hasSeats) return false;
+    if (extras === "Ambos" && !(hasClimate && hasSeats)) return false;
+
+    return true;
+  });
 }
 
 function renderHistory(){
@@ -92,13 +109,13 @@ function renderHistory(){
 
   tbody.innerHTML = "";
 
-  const history = getHistory();
+  const allHistory = getHistory();
+  const history = getFilteredHistory(allHistory);
 
   let totalKm = 0;
   let totalKwh = 0;
   let totalCost = 0;
 
-  // Acumuladores por tipo (ponderado por km)
   const byType = {
     "Ciudad": { km: 0, kwh: 0 },
     "Mixto": { km: 0, kwh: 0 },
@@ -123,6 +140,8 @@ function renderHistory(){
       <td>${e.socStart}-${e.socEnd}</td>
       <td>${fmtNum(e.kwhUsed,2)}</td>
       <td>${fmtNum(e.avg,1)}</td>
+      <td>${e.climate === "Sí" ? "❄️" : "—"}</td>
+      <td>${e.seatsHeat === "Sí" ? "🔥" : "—"}</td>
       <td>${fmtNum(e.cost,2)}</td>
       <td>${(e.notes || "").replace(/</g,"&lt;").replace(/>/g,"&gt;")}</td>
     `;
@@ -130,7 +149,6 @@ function renderHistory(){
   });
 
   const globalAvg = totalKm > 0 ? (totalKwh / totalKm) * 100 : NaN;
-
   const avgCity = byType["Ciudad"].km > 0 ? (byType["Ciudad"].kwh / byType["Ciudad"].km) * 100 : NaN;
   const avgMixed = byType["Mixto"].km > 0 ? (byType["Mixto"].kwh / byType["Mixto"].km) * 100 : NaN;
   const avgHighway = byType["Autopista"].km > 0 ? (byType["Autopista"].kwh / byType["Autopista"].km) * 100 : NaN;
@@ -145,7 +163,7 @@ function renderHistory(){
   if ($("avgHighway")) $("avgHighway").textContent = fmtAvg(avgHighway);
 }
 
-// CSV escaping
+// ===== CSV =====
 function csvEsc(v){
   const s = String(v ?? "");
   if (/[",\n]/.test(s)) return '"' + s.replace(/"/g,'""') + '"';
@@ -153,7 +171,7 @@ function csvEsc(v){
 }
 
 function exportCSV(){
-  const h = getHistory();
+  const h = getHistory(); // exporta todo (no filtrado)
   if (!h.length){
     setMessage("No hay datos para exportar.");
     return;
@@ -163,7 +181,9 @@ function exportCSV(){
     "Fecha","Tipo","Km inicio","Km fin","Km",
     "% inicio","% final","% usado",
     "kWh","kWh/100km",
-    "Carga exterior","Precio €/kWh","Coste €","Notas"
+    "Carga exterior","Precio €/kWh","Coste €",
+    "Climatización","Asientos calefactables",
+    "Notas"
   ];
 
   const rows = h.map(e => ([
@@ -180,6 +200,8 @@ function exportCSV(){
     e.external ? "Sí" : "No",
     Number(e.price).toFixed(4),
     Number(e.cost).toFixed(2),
+    e.climate || "No",
+    e.seatsHeat || "No",
     e.notes || ""
   ].map(csvEsc).join(",")));
 
@@ -197,8 +219,6 @@ function exportCSV(){
 }
 
 // ===== Importar CSV =====
-
-// Parser CSV con soporte de comillas y comas dentro de campos
 function parseCSV(text){
   const rows = [];
   let row = [];
@@ -223,13 +243,10 @@ function parseCSV(text){
       if (ch === '"'){
         inQuotes = true;
       } else if (ch === ","){
-        row.push(cur);
-        cur = "";
+        row.push(cur); cur = "";
       } else if (ch === "\n"){
-        row.push(cur);
-        rows.push(row);
-        row = [];
-        cur = "";
+        row.push(cur); rows.push(row);
+        row = []; cur = "";
       } else if (ch === "\r"){
         // ignore
       } else {
@@ -246,14 +263,15 @@ function parseCSV(text){
   return rows;
 }
 
-// Clave estable para detectar duplicados al importar
 function entryKey(e){
   return [
     e.date, e.tripType,
     Number(e.kmStart).toFixed(1),
     Number(e.kmEnd).toFixed(1),
     Number(e.socStart).toFixed(0),
-    Number(e.socEnd).toFixed(0)
+    Number(e.socEnd).toFixed(0),
+    e.climate || "No",
+    e.seatsHeat || "No"
   ].join("|");
 }
 
@@ -274,7 +292,6 @@ function importCSVFile(file){
     }
 
     const replace = $("replaceOnImport")?.checked;
-
     let history = replace ? [] : getHistory();
     const existing = new Set(history.map(entryKey));
 
@@ -298,7 +315,11 @@ function importCSVFile(file){
       const external = (cols[10] || "").trim().toLowerCase() === "sí";
       const price = parseFloat(cols[11]);
       const cost = parseFloat(cols[12]);
-      const notes = (cols[13] || "").trim();
+
+      // compatibilidad con CSV antiguos:
+      const climate = (cols[13] || "").trim() || "No";
+      const seatsHeat = (cols[14] || "").trim() || "No";
+      const notes = (cols[15] || "").trim();
 
       if (!date || !Number.isFinite(kmStart) || !Number.isFinite(kmEnd) || !Number.isFinite(kmTrip)) continue;
 
@@ -316,14 +337,13 @@ function importCSVFile(file){
         external,
         price: Number.isFinite(price) ? price : DEFAULT_HOME_PRICE,
         cost: Number.isFinite(cost) ? cost : 0,
+        climate: climate === "Sí" ? "Sí" : "No",
+        seatsHeat: seatsHeat === "Sí" ? "Sí" : "No",
         notes
       };
 
       const key = entryKey(entry);
-      if (existing.has(key)){
-        skipped++;
-        continue;
-      }
+      if (existing.has(key)){ skipped++; continue; }
 
       existing.add(key);
       history.push(entry);
@@ -367,6 +387,8 @@ function saveTrip(){
   const entry = {
     date,
     tripType: $("tripType").value,
+    climate: $("climate")?.value || "No",
+    seatsHeat: $("seatsHeat")?.value || "No",
     kmStart: c.kmStart,
     kmEnd: c.kmEnd,
     kmTrip: c.kmTrip,
@@ -386,7 +408,7 @@ function saveTrip(){
   saveHistory(history);
   renderHistory();
 
-  // UX: el siguiente trayecto empieza con el Km fin anterior
+  // UX: siguiente trayecto empieza con el Km fin anterior
   $("kmStart").value = c.kmEnd;
   $("kmEnd").value = "";
   $("notes").value = "";
@@ -402,7 +424,6 @@ function clearHistory(){
 }
 
 function init(){
-  // Fecha por defecto: hoy
   const today = new Date();
   const yyyy = today.getFullYear();
   const mm = String(today.getMonth()+1).padStart(2,"0");
@@ -413,7 +434,7 @@ function init(){
   computeCurrent();
   renderHistory();
 
-  ["kmStart","kmEnd","socStart","socEnd","notes","tripType","date"].forEach(id => {
+  ["kmStart","kmEnd","socStart","socEnd","notes","tripType","date","climate","seatsHeat"].forEach(id => {
     if (!$(id)) return;
     $(id).addEventListener("input", computeCurrent);
     $(id).addEventListener("change", computeCurrent);
@@ -425,23 +446,25 @@ function init(){
       computeCurrent();
     });
   }
-
   if ($("price")) $("price").addEventListener("input", computeCurrent);
 
   if ($("saveTrip")) $("saveTrip").addEventListener("click", saveTrip);
   if ($("exportCSV")) $("exportCSV").addEventListener("click", exportCSV);
   if ($("clearHistory")) $("clearHistory").addEventListener("click", clearHistory);
 
-  // Import CSV hooks
   if ($("importCSV") && $("csvFile")){
     $("importCSV").addEventListener("click", () => $("csvFile").click());
     $("csvFile").addEventListener("change", (e) => {
       const file = e.target.files?.[0];
       if (!file) return;
       importCSVFile(file);
-      e.target.value = ""; // permite reimportar el mismo archivo
+      e.target.value = "";
     });
   }
+
+  // filtros
+  if ($("filterType")) $("filterType").addEventListener("change", renderHistory);
+  if ($("filterExtras")) $("filterExtras").addEventListener("change", renderHistory);
 
   if ("serviceWorker" in navigator){
     navigator.serviceWorker.register("./service-worker.js").catch(()=>{});

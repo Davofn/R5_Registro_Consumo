@@ -1,4 +1,4 @@
-const CACHE_NAME = "r5-consumo-log-v3";
+const CACHE_NAME = "r5-consumo-log-v1-6";
 const ASSETS = [
   "./",
   "./index.html",

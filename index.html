@@ -4,32 +4,37 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <meta name="theme-color" content="#ffd400" />
-  <title>R5 Log Consumo</title>
+  <title>R5 Registro de Consumo</title>
+
   <link rel="manifest" href="manifest.json" />
-  <link rel="icon" type="image/png" sizes="64x64" href="assets/favicon.png" />
+  <link rel="icon" type="image/png" sizes="64x64" href="favicon.png?v=1" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
   <link rel="stylesheet" href="style.css" />
 </head>
+
 <body>
   <header class="app-header">
     <div class="brand">
       <img class="brand-icon" src="icons/icon-192.png" alt="R5" />
       <div>
-        <h1>R5 Log Consumo</h1>
+        <h1>R5 Registro de Consumo</h1>
         <p>Registro rápido de trayectos · 52 kWh</p>
       </div>
     </div>
   </header>
-<section class="hero container">
-  <div class="hero-inner">
-    <div class="hero-copy">
-      <h2>R5 Registro de Consumo</h2>
-      <p>Apunta consumos al instante</p>
-    </div>
 
-    <!-- Usa el mismo archivo de imagen que ya tengas en el repo -->
-    <img class="hero-car" src="assets/r5.png" alt="Renault 5" />
-  </div>
-</section>
+  <!-- HERO (estilo CompaCarga) -->
+  <section class="hero">
+    <div class="hero-inner">
+      <div class="hero-copy">
+        <h2>Registra al instante</h2>
+        <p>Consumo medio, coste estimado, histórico, filtros y CSV · sin servidor (local)</p>
+      </div>
+      <!-- Si tienes una imagen del coche, descomenta y ajusta el src -->
+      <!-- <img class="hero-car" src="r5.png" alt="Renault 5" /> -->
+    </div>
+  </section>
+
   <main class="container">
     <section class="card">
       <h2>Nuevo trayecto</h2>
@@ -46,6 +51,22 @@
             <option value="Ciudad">Ciudad</option>
             <option value="Autopista">Autopista</option>
             <option value="Mixto" selected>Mixto</option>
+          </select>
+        </label>
+
+        <label>
+          <span>Climatización</span>
+          <select id="climate">
+            <option value="No" selected>No</option>
+            <option value="Sí">Sí</option>
+          </select>
+        </label>
+
+        <label>
+          <span>Asientos calefactables</span>
+          <select id="seatsHeat">
+            <option value="No" selected>No</option>
+            <option value="Sí">Sí</option>
           </select>
         </label>
 
@@ -109,15 +130,15 @@
       <div class="actions">
         <button id="saveTrip" class="primary">Guardar trayecto</button>
         <button id="exportCSV">Exportar CSV</button>
+        <button id="importCSV">Importar CSV</button>
         <button id="clearHistory" class="danger">Limpiar histórico</button>
-		<button id="importCSV">Importar CSV</button>
 
-<label class="checkbox" style="margin-left:auto;">
-  <input id="replaceOnImport" type="checkbox" />
-  <span>Reemplazar datos al importar</span>
-</label>
+        <label class="checkbox" style="margin-left:auto;">
+          <input id="replaceOnImport" type="checkbox" />
+          <span>Reemplazar al importar</span>
+        </label>
 
-<input type="file" id="csvFile" accept=".csv,text/csv" hidden>
+        <input type="file" id="csvFile" accept=".csv,text/csv" hidden />
       </div>
 
       <p class="hint" id="msg" aria-live="polite"></p>
@@ -126,17 +147,42 @@
     <section class="card">
       <h2>Histórico</h2>
 
+      <!-- FILTROS -->
+      <div class="filters">
+        <label>
+          <span>Filtrar por tipo</span>
+          <select id="filterType">
+            <option value="Todos" selected>Todos</option>
+            <option value="Ciudad">Ciudad</option>
+            <option value="Mixto">Mixto</option>
+            <option value="Autopista">Autopista</option>
+          </select>
+        </label>
+
+        <label>
+          <span>Filtrar por extras</span>
+          <select id="filterExtras">
+            <option value="Todos" selected>Todos</option>
+            <option value="Clima">Solo con climatización</option>
+            <option value="Asientos">Solo con asientos calefactables</option>
+            <option value="Ambos">Solo con ambos</option>
+          </select>
+        </label>
+      </div>
+
       <div class="summary">
         <div class="pill"><span>Total km</span><strong id="totalKm">—</strong></div>
         <div class="pill"><span>Total energía</span><strong id="totalKwh">—</strong></div>
         <div class="pill"><span>Media global</span><strong id="globalAvg">—</strong></div>
         <div class="pill"><span>Total coste</span><strong id="totalCost">—</strong></div>
       </div>
-<div class="summary summary-3">
-  <div class="pill"><span>Consumo medio ciudad</span><strong id="avgCity">—</strong></div>
-  <div class="pill"><span>Consumo medio mixto</span><strong id="avgMixed">—</strong></div>
-  <div class="pill"><span>Consumo medio autopista</span><strong id="avgHighway">—</strong></div>
-</div>
+
+      <div class="summary summary-3">
+        <div class="pill"><span>Consumo medio ciudad</span><strong id="avgCity">—</strong></div>
+        <div class="pill"><span>Consumo medio mixto</span><strong id="avgMixed">—</strong></div>
+        <div class="pill"><span>Consumo medio autopista</span><strong id="avgHighway">—</strong></div>
+      </div>
+
       <div class="table-wrap">
         <table id="historyTable">
           <thead>
@@ -147,6 +193,8 @@
               <th>%</th>
               <th>kWh</th>
               <th>kWh/100</th>
+              <th>Clima</th>
+              <th>Asientos</th>
               <th>€</th>
               <th>Notas</th>
             </tr>
@@ -158,7 +206,7 @@
   </main>
 
   <footer class="footer">
-    <small>v1.2 · Davo</small>
+    <small>v1.4 · localStorage · PWA</small>
   </footer>
 
   <script src="app.js"></script>
