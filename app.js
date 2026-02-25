@@ -145,6 +145,7 @@ function renderHistory(){
   const allHistory = getHistory();
   updateOdometerUI(allHistory);
   autofillKmStartFromHistory(allHistory);
+  autofillSocStartFromHistory(allHistory);
   const history = getFilteredHistory(allHistory);
   
 
@@ -510,3 +511,4 @@ function init(){
 
 
 window.addEventListener("load", init);
+
