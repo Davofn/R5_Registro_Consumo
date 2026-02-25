@@ -260,7 +260,12 @@ th{
   color: var(--muted);
   font-weight:600;
 }
-
+.odo{
+  margin-top: 10px;
+}
+.odo .pill{
+  max-width: 360px;
+}
 .footer{
   max-width:980px;
   margin: 0 auto;
@@ -279,4 +284,5 @@ th{
   .summary-3{ grid-template-columns: 1fr 1fr 1fr; }
   .summary-3 .pill{ max-width:none; }
   .filters{ grid-template-columns: 1fr 1fr; }
+
 }
