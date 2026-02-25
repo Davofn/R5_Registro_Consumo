@@ -1,4 +1,4 @@
-const CACHE_NAME = "r5-consumo-log-v1-6";
+const CACHE_NAME = "r5-consumo-log-v1-7";
 const ASSETS = [
   "./",
   "./index.html",
@@ -31,4 +31,5 @@ self.addEventListener("fetch", (event) => {
       return fetch(event.request).catch(() => caches.match("./index.html"));
     })
   );
+
 });
