@@ -8,7 +8,18 @@ function clamp(n, min, max){
   if (Number.isNaN(n)) return min;
   return Math.max(min, Math.min(max, n));
 }
+function autofillKmStart(){
+  const history = getHistory();
+  if (!history.length) return;
 
+  const last = history[history.length - 1];
+  if (Number.isFinite(last.kmEnd)){
+    const input = $("kmStart");
+    if (input && !input.value){
+      input.value = last.kmEnd;
+    }
+  }
+}
 function fmtNum(n, digits=2){
   if (!Number.isFinite(n)) return "—";
   return new Intl.NumberFormat("es-ES", {
@@ -100,7 +111,29 @@ function getFilteredHistory(all){
     return true;
   });
 }
+function updateOdometerUI(history){
+  const el = $("odoNow");
+  if (!el) return;
 
+  if (!history.length){
+    el.textContent = "—";
+    return;
+  }
+
+  const last = history[history.length - 1];
+  el.textContent = Number.isFinite(last.kmEnd) ? fmtKm(last.kmEnd) : "—";
+}
+
+function autofillKmStartFromHistory(history){
+  if (!history.length) return;
+  const last = history[history.length - 1];
+  if (!Number.isFinite(last.kmEnd)) return;
+
+  const input = $("kmStart");
+  if (input && !input.value){
+    input.value = last.kmEnd;
+  }
+}
 function renderHistory(){
   const table = $("historyTable");
   if (!table) return;
@@ -110,7 +143,10 @@ function renderHistory(){
   tbody.innerHTML = "";
 
   const allHistory = getHistory();
+  updateOdometerUI(allHistory);
+  autofillKmStartFromHistory(allHistory);
   const history = getFilteredHistory(allHistory);
+  
 
   let totalKm = 0;
   let totalKwh = 0;
@@ -433,6 +469,7 @@ function init(){
   applyPriceUI();
   computeCurrent();
   renderHistory();
+  autofillKmStart();
 
   ["kmStart","kmEnd","socStart","socEnd","notes","tripType","date","climate","seatsHeat"].forEach(id => {
     if (!$(id)) return;
@@ -470,5 +507,6 @@ function init(){
     navigator.serviceWorker.register("./service-worker.js").catch(()=>{});
   }
 }
+
 
 window.addEventListener("load", init);
