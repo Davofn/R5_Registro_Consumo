@@ -8,18 +8,18 @@ function clamp(n, min, max){
   if (Number.isNaN(n)) return min;
   return Math.max(min, Math.min(max, n));
 }
-function autofillKmStart(){
-  const history = getHistory();
-  if (!history.length) return;
+"function autofillKmStart(){
+ " const history = getHistory();
+  "if (!history.length) return;
 
-  const last = history[history.length - 1];
-  if (Number.isFinite(last.kmEnd)){
-    const input = $("kmStart");
-    if (input && !input.value){
-      input.value = last.kmEnd;
-    }
-  }
-}
+  "const last = history[history.length - 1];
+  "if (Number.isFinite(last.kmEnd)){
+   " const input = $("kmStart");
+    "if (input && !input.value){
+     " input.value = last.kmEnd;
+    "}
+  "}
+"}
 function fmtNum(n, digits=2){
   if (!Number.isFinite(n)) return "—";
   return new Intl.NumberFormat("es-ES", {
@@ -132,6 +132,22 @@ function autofillKmStartFromHistory(history){
   const input = $("kmStart");
   if (input && !input.value){
     input.value = last.kmEnd;
+  }
+}
+function autofillSocStartFromHistory(history){
+  if (!history.length) return;
+
+  const last = history[history.length - 1];
+  if (!Number.isFinite(last.socEnd)) return;
+
+  const input = $("socStart");
+  if (!input) return;
+
+  // No pisar si el usuario ya ha escrito algo.
+  // Solo autocompleta si está vacío o con el valor "por defecto" típico.
+  const v = String(input.value ?? "").trim();
+  if (v === "" || v === "80"){
+    input.value = last.socEnd;
   }
 }
 function renderHistory(){
@@ -470,8 +486,7 @@ function init(){
   applyPriceUI();
   computeCurrent();
   renderHistory();
-  autofillKmStart();
-
+ 
   ["kmStart","kmEnd","socStart","socEnd","notes","tripType","date","climate","seatsHeat"].forEach(id => {
     if (!$(id)) return;
     $(id).addEventListener("input", computeCurrent);
@@ -511,4 +526,5 @@ function init(){
 
 
 window.addEventListener("load", init);
+
 
