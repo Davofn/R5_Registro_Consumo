@@ -153,13 +153,11 @@ input:focus, select:focus{
   border-radius:14px;
   background: rgba(0,0,0,.14);
 }
-
 .checkbox input{
   width:auto;
   margin:0;
   box-shadow:none;
 }
-
 .checkbox span{
   margin:0;
   color:var(--text);
@@ -183,7 +181,6 @@ input:focus, select:focus{
   flex-direction:column;
   justify-content:center;
 }
-
 .result span{font-size:12px;color:var(--muted)}
 .result strong{font-size:18px; margin-top:4px}
 
@@ -248,6 +245,9 @@ button.danger{
 .summary-3{ justify-items:center; }
 .summary-3 .pill{ width:100%; max-width:360px; }
 
+.odo{ margin-top: 10px; }
+.odo .pill{ max-width: 360px; }
+
 .table-wrap{ overflow-x:auto; }
 table{ width:100%; border-collapse: collapse; font-size:12px; }
 th, td{
@@ -260,12 +260,14 @@ th{
   color: var(--muted);
   font-weight:600;
 }
-.odo{
-  margin-top: 10px;
+
+/* fila resumen por batería (stint) */
+tr.stint-summary td{
+  background: rgba(255,212,0,.10);
+  border-bottom: 1px solid rgba(255,212,0,.22);
+  font-weight: 650;
 }
-.odo .pill{
-  max-width: 360px;
-}
+
 .footer{
   max-width:980px;
   margin: 0 auto;
@@ -284,5 +286,4 @@ th{
   .summary-3{ grid-template-columns: 1fr 1fr 1fr; }
   .summary-3 .pill{ max-width:none; }
   .filters{ grid-template-columns: 1fr 1fr; }
-
 }
