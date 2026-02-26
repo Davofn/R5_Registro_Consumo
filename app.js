@@ -8,18 +8,7 @@ function clamp(n, min, max){
   if (Number.isNaN(n)) return min;
   return Math.max(min, Math.min(max, n));
 }
-"function autofillKmStart(){
- " const history = getHistory();
-  "if (!history.length) return;
 
-  "const last = history[history.length - 1];
-  "if (Number.isFinite(last.kmEnd)){
-   " const input = $("kmStart");
-    "if (input && !input.value){
-     " input.value = last.kmEnd;
-    "}
-  "}
-"}
 function fmtNum(n, digits=2){
   if (!Number.isFinite(n)) return "—";
   return new Intl.NumberFormat("es-ES", {
@@ -38,7 +27,11 @@ function fmtEUR(n){
 }
 
 function getHistory(){
-  return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+  try{
+    return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+  }catch{
+    return [];
+  }
 }
 
 function saveHistory(arr){
@@ -51,14 +44,20 @@ function setMessage(text){
 }
 
 function computeCurrent(){
-  const kmStart = parseFloat($("kmStart").value);
-  const kmEnd = parseFloat($("kmEnd").value);
+  const kmStartEl = $("kmStart");
+  const kmEndEl = $("kmEnd");
+  const socStartEl = $("socStart");
+  const socEndEl = $("socEnd");
+  const priceEl = $("price");
 
-  const socStart = clamp(parseFloat($("socStart").value), 0, 100);
-  const socEnd = clamp(parseFloat($("socEnd").value), 0, 100);
+  const kmStart = parseFloat(kmStartEl?.value);
+  const kmEnd = parseFloat(kmEndEl?.value);
 
-  $("socStart").value = socStart;
-  $("socEnd").value = socEnd;
+  const socStart = clamp(parseFloat(socStartEl?.value), 0, 100);
+  const socEnd = clamp(parseFloat(socEndEl?.value), 0, 100);
+
+  if (socStartEl) socStartEl.value = socStart;
+  if (socEndEl) socEndEl.value = socEnd;
 
   const kmTrip = (Number.isFinite(kmStart) && Number.isFinite(kmEnd)) ? (kmEnd - kmStart) : NaN;
   const socUsed = socStart - socEnd;
@@ -68,13 +67,13 @@ function computeCurrent(){
     ? (kwhUsed / kmTrip) * 100
     : NaN;
 
-  const price = Math.max(0, parseFloat($("price").value));
+  const price = Math.max(0, parseFloat(priceEl?.value));
   const cost = Number.isFinite(kwhUsed) ? (kwhUsed * price) : NaN;
 
-  $("kmTrip").textContent = fmtKm(kmTrip);
-  $("kwhUsed").textContent = fmtKwh(kwhUsed);
-  $("avg").textContent = fmtAvg(avg);
-  $("cost").textContent = fmtEUR(cost);
+  if ($("kmTrip")) $("kmTrip").textContent = fmtKm(kmTrip);
+  if ($("kwhUsed")) $("kwhUsed").textContent = fmtKwh(kwhUsed);
+  if ($("avg")) $("avg").textContent = fmtAvg(avg);
+  if ($("cost")) $("cost").textContent = fmtEUR(cost);
 
   return { kmStart, kmEnd, kmTrip, socStart, socEnd, socUsed, kwhUsed, avg, price, cost };
 }
@@ -93,7 +92,7 @@ function applyPriceUI(){
   }
 }
 
-// ===== filtros =====
+// ===== Filtros =====
 function getFilteredHistory(all){
   const type = $("filterType")?.value || "Todos";
   const extras = $("filterExtras")?.value || "Todos";
@@ -111,6 +110,8 @@ function getFilteredHistory(all){
     return true;
   });
 }
+
+// ===== Autorellenos + Odómetro =====
 function updateOdometerUI(history){
   const el = $("odoNow");
   if (!el) return;
@@ -119,7 +120,6 @@ function updateOdometerUI(history){
     el.textContent = "—";
     return;
   }
-
   const last = history[history.length - 1];
   el.textContent = Number.isFinite(last.kmEnd) ? fmtKm(last.kmEnd) : "—";
 }
@@ -130,26 +130,29 @@ function autofillKmStartFromHistory(history){
   if (!Number.isFinite(last.kmEnd)) return;
 
   const input = $("kmStart");
-  if (input && !input.value){
+  if (input && !String(input.value ?? "").trim()){
     input.value = last.kmEnd;
   }
 }
+
 function autofillSocStartFromHistory(history){
   if (!history.length) return;
-
   const last = history[history.length - 1];
   if (!Number.isFinite(last.socEnd)) return;
 
   const input = $("socStart");
   if (!input) return;
 
-  // No pisar si el usuario ya ha escrito algo.
-  // Solo autocompleta si está vacío o con el valor "por defecto" típico.
+  // No pisar si el usuario ya ha escrito algo:
   const v = String(input.value ?? "").trim();
+
+  // Rellena solo si está vacío o si coincide con el default típico (80).
   if (v === "" || v === "80"){
     input.value = last.socEnd;
   }
 }
+
+// ===== Histórico =====
 function renderHistory(){
   const table = $("historyTable");
   if (!table) return;
@@ -158,12 +161,13 @@ function renderHistory(){
 
   tbody.innerHTML = "";
 
+  // OJO: odómetro y autorellenos deben usar el histórico completo (sin filtros)
   const allHistory = getHistory();
   updateOdometerUI(allHistory);
   autofillKmStartFromHistory(allHistory);
   autofillSocStartFromHistory(allHistory);
+
   const history = getFilteredHistory(allHistory);
-  
 
   let totalKm = 0;
   let totalKwh = 0;
@@ -369,7 +373,6 @@ function importCSVFile(file){
       const price = parseFloat(cols[11]);
       const cost = parseFloat(cols[12]);
 
-      // compatibilidad con CSV antiguos:
       const climate = (cols[13] || "").trim() || "No";
       const seatsHeat = (cols[14] || "").trim() || "No";
       const notes = (cols[15] || "").trim();
@@ -416,6 +419,7 @@ function importCSVFile(file){
   reader.readAsText(file, "utf-8");
 }
 
+// ===== Guardar / Limpiar =====
 function saveTrip(){
   const c = computeCurrent();
 
@@ -432,14 +436,14 @@ function saveTrip(){
     return;
   }
 
-  const dateInput = $("date").value;
+  const dateInput = $("date")?.value;
   const date = dateInput
     ? dateInput.split("-").reverse().join("/")
     : new Date().toLocaleDateString("es-ES");
 
   const entry = {
     date,
-    tripType: $("tripType").value,
+    tripType: $("tripType")?.value || "Mixto",
     climate: $("climate")?.value || "No",
     seatsHeat: $("seatsHeat")?.value || "No",
     kmStart: c.kmStart,
@@ -453,7 +457,7 @@ function saveTrip(){
     external: $("externalCharge")?.checked || false,
     price: c.price,
     cost: c.cost,
-    notes: $("notes").value.trim()
+    notes: ($("notes")?.value || "").trim()
   };
 
   const history = getHistory();
@@ -462,9 +466,9 @@ function saveTrip(){
   renderHistory();
 
   // UX: siguiente trayecto empieza con el Km fin anterior
-  $("kmStart").value = c.kmEnd;
-  $("kmEnd").value = "";
-  $("notes").value = "";
+  if ($("kmStart")) $("kmStart").value = c.kmEnd;
+  if ($("kmEnd")) $("kmEnd").value = "";
+  if ($("notes")) $("notes").value = "";
 
   setMessage("Trayecto guardado. Km inicio actualizado con el Km fin anterior.");
   computeCurrent();
@@ -476,21 +480,27 @@ function clearHistory(){
   setMessage("Histórico borrado.");
 }
 
+// ===== Init =====
 function init(){
-  const today = new Date();
-  const yyyy = today.getFullYear();
-  const mm = String(today.getMonth()+1).padStart(2,"0");
-  const dd = String(today.getDate()).padStart(2,"0");
-  if ($("date")) $("date").value = `${yyyy}-${mm}-${dd}`;
+  const dateEl = $("date");
+  if (dateEl){
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth()+1).padStart(2,"0");
+    const dd = String(today.getDate()).padStart(2,"0");
+    dateEl.value = `${yyyy}-${mm}-${dd}`;
+  }
 
   applyPriceUI();
   computeCurrent();
-  renderHistory();
- 
-  ["kmStart","kmEnd","socStart","socEnd","notes","tripType","date","climate","seatsHeat"].forEach(id => {
-    if (!$(id)) return;
-    $(id).addEventListener("input", computeCurrent);
-    $(id).addEventListener("change", computeCurrent);
+  renderHistory(); // aquí ya autocompleta kmStart y socStart
+
+  const watchIds = ["kmStart","kmEnd","socStart","socEnd","notes","tripType","date","climate","seatsHeat"];
+  watchIds.forEach(id => {
+    const el = $(id);
+    if (!el) return;
+    el.addEventListener("input", computeCurrent);
+    el.addEventListener("change", computeCurrent);
   });
 
   if ($("externalCharge")){
@@ -515,7 +525,6 @@ function init(){
     });
   }
 
-  // filtros
   if ($("filterType")) $("filterType").addEventListener("change", renderHistory);
   if ($("filterExtras")) $("filterExtras").addEventListener("change", renderHistory);
 
@@ -524,7 +533,4 @@ function init(){
   }
 }
 
-
 window.addEventListener("load", init);
-
-
