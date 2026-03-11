@@ -498,6 +498,7 @@ function importCSVFile(file){
     }
 
     saveHistory(history);
+    rebuildBatterySummaries();
     renderHistory();
 
     setMessage(
@@ -639,4 +640,5 @@ function init(){
 }
 
 window.addEventListener("load", init);
+
 
