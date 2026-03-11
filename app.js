@@ -104,7 +104,36 @@ function getFilteredHistory(all){
     return true;
   });
 }
+function rebuildBatterySummaries(){
+  const history = getHistory();
 
+  const rebuilt = [];
+  let block = [];
+
+  for (let i = 0; i < history.length; i++){
+    const cur = history[i];
+
+    if (block.length === 0){
+      block.push(cur);
+      rebuilt.push(cur);
+      continue;
+    }
+
+    const prev = block[block.length - 1];
+
+    if (cur.socStart > prev.socEnd + 1){
+      const summary = buildStintSummary(block);
+      if (summary) rebuilt.push(summary);
+
+      block = [];
+    }
+
+    block.push(cur);
+    rebuilt.push(cur);
+  }
+
+  saveHistory(rebuilt);
+}
 // ===== Odómetro + autorellenos (siempre usando histórico completo sin filtros) =====
 function updateOdometerUI(allHistory){
   const el = $("odoNow");
@@ -610,3 +639,4 @@ function init(){
 }
 
 window.addEventListener("load", init);
+
