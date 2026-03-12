@@ -66,7 +66,22 @@ async function insertTripToSupabase(entry){
     throw error;
   }
 }
+async function importTripsToSupabase(entries){
+  if (!entries.length) return { inserted: 0 };
 
+  const rows = entries.map(tripToRow);
+
+  const { error } = await supabase
+    .from("trips")
+    .insert(rows);
+
+  if (error){
+    console.error("Error importando CSV a Supabase:", error);
+    throw error;
+  }
+
+  return { inserted: rows.length };
+}
 // ===== Local storage (la app sigue usando esto por ahora) =====
 function getHistory(){
   try {
@@ -674,93 +689,104 @@ function setupDetailsToggle(){
 }
 
 // ===== Importar CSV =====
-function importCSVFile(file){
+async function importCSVFile(file){
   const reader = new FileReader();
 
-  reader.onload = (ev) => {
-    const text = String(ev.target.result || "").trim();
-    if (!text){
-      setMessage("El CSV está vacío.");
-      return;
-    }
-
-    const rows = parseCSV(text);
-    if (rows.length < 2){
-      setMessage("CSV sin datos (solo cabecera).");
-      return;
-    }
-
-    const replace = $("replaceOnImport")?.checked;
-    let history = replace ? [] : getHistory();
-    history = history.filter(isTripRow);
-
-    const existing = new Set(history.map(entryKey));
-    let imported = 0;
-    let skipped = 0;
-
-    for (let r = 1; r < rows.length; r++){
-      const cols = rows[r];
-      if (!cols || cols.length < 10) continue;
-
-      const date = (cols[0] || "").trim();
-      const tripType = (cols[1] || "").trim() || "Mixto";
-      const kmStart = parseFloat(cols[2]);
-      const kmEnd = parseFloat(cols[3]);
-      const kmTrip = parseFloat(cols[4]);
-      const socStart = parseFloat(cols[5]);
-      const socEnd = parseFloat(cols[6]);
-      const socUsed = parseFloat(cols[7]);
-      const kwhUsed = parseFloat(cols[8]);
-      const avg = parseFloat(cols[9]);
-      const external = (cols[10] || "").trim().toLowerCase() === "sí";
-      const price = parseFloat(cols[11]);
-      const cost = parseFloat(cols[12]);
-      const climate = (cols[13] || "").trim() || "No";
-      const seatsHeat = (cols[14] || "").trim() || "No";
-      const notes = (cols[15] || "").trim();
-
-      if (!date || !Number.isFinite(kmStart) || !Number.isFinite(kmEnd) || !Number.isFinite(kmTrip)) continue;
-
-      const entry = {
-        kind: "trip",
-        date,
-        tripType,
-        kmStart,
-        kmEnd,
-        kmTrip,
-        socStart: Number.isFinite(socStart) ? socStart : 0,
-        socEnd: Number.isFinite(socEnd) ? socEnd : 0,
-        socUsed: Number.isFinite(socUsed) ? socUsed : 0,
-        kwhUsed: Number.isFinite(kwhUsed) ? kwhUsed : 0,
-        avg: Number.isFinite(avg) ? avg : 0,
-        external,
-        price: Number.isFinite(price) ? price : DEFAULT_HOME_PRICE,
-        cost: Number.isFinite(cost) ? cost : 0,
-        climate: climate === "Sí" ? "Sí" : "No",
-        seatsHeat: seatsHeat === "Sí" ? "Sí" : "No",
-        notes
-      };
-
-      const key = entryKey(entry);
-      if (existing.has(key)){
-        skipped++;
-        continue;
+  reader.onload = async (ev) => {
+    try {
+      const text = String(ev.target.result || "").trim();
+      if (!text){
+        setMessage("El CSV está vacío.");
+        return;
       }
 
-      existing.add(key);
-      history.push(entry);
-      imported++;
+      const rows = parseCSV(text);
+      if (rows.length < 2){
+        setMessage("CSV sin datos (solo cabecera).");
+        return;
+      }
+
+      // Leer lo que ya hay en Supabase para evitar duplicados
+      const remoteHistory = await getHistoryFromSupabase();
+      const existing = new Set(remoteHistory.map(entryKey));
+
+      const entriesToInsert = [];
+      let imported = 0;
+      let skipped = 0;
+
+      for (let r = 1; r < rows.length; r++){
+        const cols = rows[r];
+        if (!cols || cols.length < 10) continue;
+
+        const date = (cols[0] || "").trim();
+        const tripType = (cols[1] || "").trim() || "Mixto";
+        const kmStart = parseFloat(cols[2]);
+        const kmEnd = parseFloat(cols[3]);
+        const kmTrip = parseFloat(cols[4]);
+        const socStart = parseFloat(cols[5]);
+        const socEnd = parseFloat(cols[6]);
+        const socUsed = parseFloat(cols[7]);
+        const kwhUsed = parseFloat(cols[8]);
+        const avg = parseFloat(cols[9]);
+        const external = (cols[10] || "").trim().toLowerCase() === "sí";
+        const price = parseFloat(cols[11]);
+        const cost = parseFloat(cols[12]);
+        const climate = (cols[13] || "").trim() || "No";
+        const seatsHeat = (cols[14] || "").trim() || "No";
+        const notes = (cols[15] || "").trim();
+
+        if (!date || !Number.isFinite(kmStart) || !Number.isFinite(kmEnd) || !Number.isFinite(kmTrip)){
+          continue;
+        }
+
+        const entry = {
+          kind: "trip",
+          date,
+          tripType,
+          kmStart,
+          kmEnd,
+          kmTrip,
+          socStart: Number.isFinite(socStart) ? socStart : 0,
+          socEnd: Number.isFinite(socEnd) ? socEnd : 0,
+          socUsed: Number.isFinite(socUsed) ? socUsed : 0,
+          kwhUsed: Number.isFinite(kwhUsed) ? kwhUsed : 0,
+          avg: Number.isFinite(avg) ? avg : 0,
+          external,
+          price: Number.isFinite(price) ? price : DEFAULT_HOME_PRICE,
+          cost: Number.isFinite(cost) ? cost : 0,
+          climate: climate === "Sí" ? "Sí" : "No",
+          seatsHeat: seatsHeat === "Sí" ? "Sí" : "No",
+          notes
+        };
+
+        const key = entryKey(entry);
+        if (existing.has(key)){
+          skipped++;
+          continue;
+        }
+
+        existing.add(key);
+        entriesToInsert.push(entry);
+        imported++;
+      }
+
+      if (!entriesToInsert.length){
+        setMessage("No hay trayectos nuevos que importar a Supabase.");
+        return;
+      }
+
+      await importTripsToSupabase(entriesToInsert);
+
+      setMessage(`Importación a Supabase completada. Importados: ${imported}. Duplicados omitidos: ${skipped}.`);
+
+      // opcional: verificación rápida en consola
+      const remoteTrips = await getHistoryFromSupabase();
+      console.log("Trips en Supabase tras importar:", remoteTrips);
+
+    } catch (err) {
+      console.error(err);
+      setMessage("Error importando CSV a Supabase. Revisa la consola.");
     }
-
-    saveHistory(history);
-    rebuildBatterySummaries();
-    renderHistory();
-
-    setMessage(
-      replace
-        ? `Importación completada (reemplazado). Importados: ${imported}.`
-        : `Importación completada. Importados: ${imported}. Duplicados omitidos: ${skipped}.`
-    );
   };
 
   reader.readAsText(file, "utf-8");
@@ -899,4 +925,5 @@ async function init(){
 }
 
 window.addEventListener("load", init);
+
 
