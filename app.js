@@ -1,7 +1,7 @@
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
 const SUPABASE_URL = "https://fzsioxqmpjmunaszrjdl.supabase.co";
-const SUPABASE_KEY = "PON_AQUI_TU_PUBLISHABLE_KEY_REAL";
+const SUPABASE_KEY = "sb_publishable_lPgxna3-91FskASGGI854g_RZndEz2S";
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
@@ -899,3 +899,4 @@ async function init(){
 }
 
 window.addEventListener("load", init);
+
