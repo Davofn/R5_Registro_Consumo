@@ -49,6 +49,9 @@ async function getHistoryFromSupabase(){
   return (data || []).map(rowToTrip);
 }
 
+  return (data || []).map(rowToTrip);
+}
+
 function saveHistory(arr){
   localStorage.setItem(STORAGE_KEY, JSON.stringify(arr));
 }
@@ -103,17 +106,6 @@ function rowToTrip(row){
     notes: row.notes || ""
   };
 }
-async function getHistoryFromSupabase(){
-  const { data, error } = await supabase
-    .from("trips")
-    .select("*")
-    .order("created_at", { ascending: true });
-
-  if (error){
-    console.error("Error cargando trips desde Supabase:", error);
-    return [];
-  }
-
   return (data || []).map(rowToTrip);
 }
 function computeCurrent(){
@@ -894,5 +886,6 @@ console.log("Trips en Supabase:", remoteTrips);
 }
 
 window.addEventListener("load", init);
+
 
 
