@@ -283,6 +283,7 @@ function renderHistory(){
   }
 
   const globalAvg = totalKm > 0 ? (totalKwh / totalKm) * 100 : NaN;
+  const costPer100 = totalKm > 0 ? (totalCost / totalKm) * 100 : NaN;
   const avgCity = byType["Ciudad"].km > 0 ? (byType["Ciudad"].kwh / byType["Ciudad"].km) * 100 : NaN;
   const avgMixed = byType["Mixto"].km > 0 ? (byType["Mixto"].kwh / byType["Mixto"].km) * 100 : NaN;
   const avgHighway = byType["Autopista"].km > 0 ? (byType["Autopista"].kwh / byType["Autopista"].km) * 100 : NaN;
@@ -291,7 +292,7 @@ function renderHistory(){
   if ($("totalKwh")) $("totalKwh").textContent = fmtKwh(totalKwh);
   if ($("globalAvg")) $("globalAvg").textContent = fmtAvg(globalAvg);
   if ($("totalCost")) $("totalCost").textContent = fmtEUR(totalCost);
-
+  if ($("costPer100")) $("costPer100").textContent = fmtEUR(costPer100);
   if ($("avgCity")) $("avgCity").textContent = fmtAvg(avgCity);
   if ($("avgMixed")) $("avgMixed").textContent = fmtAvg(avgMixed);
   if ($("avgHighway")) $("avgHighway").textContent = fmtAvg(avgHighway);
@@ -640,5 +641,6 @@ function init(){
 }
 
 window.addEventListener("load", init);
+
 
 
