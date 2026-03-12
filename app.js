@@ -49,9 +49,6 @@ async function getHistoryFromSupabase(){
   return (data || []).map(rowToTrip);
 }
 
-  return (data || []).map(rowToTrip);
-}
-
 function saveHistory(arr){
   localStorage.setItem(STORAGE_KEY, JSON.stringify(arr));
 }
@@ -886,6 +883,7 @@ console.log("Trips en Supabase:", remoteTrips);
 }
 
 window.addEventListener("load", init);
+
 
 
 
