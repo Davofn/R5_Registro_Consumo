@@ -298,3 +298,37 @@ tr.stint-summary td{
   border: 1px solid rgba(255,255,255,.08);
   background: rgba(0,0,0,.14);
 }
+.chart-legend{
+  display:flex;
+  gap:18px;
+  align-items:center;
+  margin-bottom:10px;
+  font-size:13px;
+  color:var(--muted);
+}
+
+.legend-item{
+  display:flex;
+  align-items:center;
+  gap:6px;
+}
+
+.legend-dot{
+  width:10px;
+  height:10px;
+  border-radius:50%;
+  display:inline-block;
+}
+
+.legend-dot.city{
+  background:#22c55e;
+}
+
+.legend-dot.mixed{
+  background:#ffd400;
+}
+
+.legend-dot.highway{
+  background:#3b82f6;
+}
+
