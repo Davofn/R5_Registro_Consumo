@@ -1,9 +1,10 @@
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
 const SUPABASE_URL = "https://fzsioxqmpjmunaszrjdl.supabase.co";
-const SUPABASE_KEY = "TU_PUBLISHABLE_KEY_AQUI";
+const SUPABASE_KEY = "PON_AQUI_TU_PUBLISHABLE_KEY_REAL";
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+
 const BATTERY_KWH = 52;
 const DEFAULT_HOME_PRICE = 0.1176;
 const STORAGE_KEY = "r5_consumo_log_history";
@@ -18,7 +19,7 @@ function clamp(n, min, max){
   return Math.max(min, Math.min(max, n));
 }
 
-function fmtNum(n, digits=2){
+function fmtNum(n, digits = 2){
   if (!Number.isFinite(n)) return "—";
   return new Intl.NumberFormat("es-ES", {
     maximumFractionDigits: digits,
@@ -26,15 +27,19 @@ function fmtNum(n, digits=2){
   }).format(n);
 }
 
-function fmtKwh(n){ return Number.isFinite(n) ? `${fmtNum(n,2)} kWh` : "—"; }
-function fmtKm(n){ return Number.isFinite(n) ? `${fmtNum(n,1)} km` : "—"; }
-function fmtAvg(n){ return Number.isFinite(n) ? `${fmtNum(n,1)} kWh/100km` : "—"; }
+function fmtKwh(n){ return Number.isFinite(n) ? `${fmtNum(n, 2)} kWh` : "—"; }
+function fmtKm(n){ return Number.isFinite(n) ? `${fmtNum(n, 1)} km` : "—"; }
+function fmtAvg(n){ return Number.isFinite(n) ? `${fmtNum(n, 1)} kWh/100km` : "—"; }
 
 function fmtEUR(n){
   if (!Number.isFinite(n)) return "—";
-  return new Intl.NumberFormat("es-ES", { style:"currency", currency:"EUR" }).format(n);
+  return new Intl.NumberFormat("es-ES", {
+    style: "currency",
+    currency: "EUR"
+  }).format(n);
 }
 
+// ===== Supabase (solo prueba de conexión por ahora) =====
 async function getHistoryFromSupabase(){
   const { data, error } = await supabase
     .from("trips")
@@ -49,6 +54,28 @@ async function getHistoryFromSupabase(){
   return (data || []).map(rowToTrip);
 }
 
+async function insertTripToSupabase(entry){
+  const row = tripToRow(entry);
+
+  const { error } = await supabase
+    .from("trips")
+    .insert([row]);
+
+  if (error){
+    console.error("Error insertando trip en Supabase:", error);
+    throw error;
+  }
+}
+
+// ===== Local storage (la app sigue usando esto por ahora) =====
+function getHistory(){
+  try {
+    return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+  } catch {
+    return [];
+  }
+}
+
 function saveHistory(arr){
   localStorage.setItem(STORAGE_KEY, JSON.stringify(arr));
 }
@@ -61,6 +88,7 @@ function setMessage(text){
 function isTripRow(e){
   return !e.kind || e.kind === "trip";
 }
+
 function tripToRow(entry){
   return {
     trip_date: entry.date,
@@ -103,8 +131,7 @@ function rowToTrip(row){
     notes: row.notes || ""
   };
 }
-  return (data || []).map(rowToTrip);
-}
+
 function computeCurrent(){
   const kmStart = parseFloat($("kmStart")?.value);
   const kmEnd = parseFloat($("kmEnd")?.value);
@@ -149,7 +176,6 @@ function applyPriceUI(){
 }
 
 // ===== Filtros =====
-// Las filas de resumen batería siempre se muestran.
 function getFilteredHistory(all){
   const type = $("filterType")?.value || "Todos";
   const extras = $("filterExtras")?.value || "Todos";
@@ -812,25 +838,15 @@ function clearHistory(){
   renderHistory();
   setMessage("Histórico borrado.");
 }
-async function insertTripToSupabase(entry){
-  const row = tripToRow(entry);
-
-  const { error } = await supabase
-    .from("trips")
-    .insert([row]);
-
-  if (error){
-    console.error("Error insertando trip en Supabase:", error);
-    throw error;
-  }
-}
 
 // ===== Inicialización =====
 async function init(){
   setupDetailsToggle();
   setupChartToggle();
+
   const remoteTrips = await getHistoryFromSupabase();
-console.log("Trips en Supabase:", remoteTrips);
+  console.log("Trips en Supabase:", remoteTrips);
+
   const dateEl = $("date");
   if (dateEl){
     const today = new Date();
@@ -883,7 +899,3 @@ console.log("Trips en Supabase:", remoteTrips);
 }
 
 window.addEventListener("load", init);
-
-
-
-
