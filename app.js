@@ -35,12 +35,18 @@ function fmtEUR(n){
   return new Intl.NumberFormat("es-ES", { style:"currency", currency:"EUR" }).format(n);
 }
 
-function getHistory(){
-  try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
-  } catch {
+async function getHistoryFromSupabase(){
+  const { data, error } = await supabase
+    .from("trips")
+    .select("*")
+    .order("created_at", { ascending: true });
+
+  if (error){
+    console.error("Error cargando trips desde Supabase:", error);
     return [];
   }
+
+  return (data || []).map(rowToTrip);
 }
 
 function saveHistory(arr){
@@ -55,7 +61,61 @@ function setMessage(text){
 function isTripRow(e){
   return !e.kind || e.kind === "trip";
 }
+function tripToRow(entry){
+  return {
+    trip_date: entry.date,
+    trip_type: entry.tripType,
+    climate: entry.climate || "No",
+    seats_heat: entry.seatsHeat || "No",
+    km_start: entry.kmStart,
+    km_end: entry.kmEnd,
+    km_trip: entry.kmTrip,
+    soc_start: entry.socStart,
+    soc_end: entry.socEnd,
+    soc_used: entry.socUsed,
+    kwh_used: entry.kwhUsed,
+    avg: entry.avg,
+    external: entry.external || false,
+    price: entry.price ?? DEFAULT_HOME_PRICE,
+    cost: entry.cost ?? 0,
+    notes: entry.notes || ""
+  };
+}
 
+function rowToTrip(row){
+  return {
+    kind: "trip",
+    date: row.trip_date,
+    tripType: row.trip_type,
+    climate: row.climate || "No",
+    seatsHeat: row.seats_heat || "No",
+    kmStart: Number(row.km_start),
+    kmEnd: Number(row.km_end),
+    kmTrip: Number(row.km_trip),
+    socStart: Number(row.soc_start),
+    socEnd: Number(row.soc_end),
+    socUsed: Number(row.soc_used),
+    kwhUsed: Number(row.kwh_used),
+    avg: Number(row.avg),
+    external: !!row.external,
+    price: Number(row.price),
+    cost: Number(row.cost),
+    notes: row.notes || ""
+  };
+}
+async function getHistoryFromSupabase(){
+  const { data, error } = await supabase
+    .from("trips")
+    .select("*")
+    .order("created_at", { ascending: true });
+
+  if (error){
+    console.error("Error cargando trips desde Supabase:", error);
+    return [];
+  }
+
+  return (data || []).map(rowToTrip);
+}
 function computeCurrent(){
   const kmStart = parseFloat($("kmStart")?.value);
   const kmEnd = parseFloat($("kmEnd")?.value);
@@ -763,12 +823,25 @@ function clearHistory(){
   renderHistory();
   setMessage("Histórico borrado.");
 }
+async function insertTripToSupabase(entry){
+  const row = tripToRow(entry);
+
+  const { error } = await supabase
+    .from("trips")
+    .insert([row]);
+
+  if (error){
+    console.error("Error insertando trip en Supabase:", error);
+    throw error;
+  }
+}
 
 // ===== Inicialización =====
-function init(){
+async function init(){
   setupDetailsToggle();
   setupChartToggle();
-
+  const remoteTrips = await getHistoryFromSupabase();
+console.log("Trips en Supabase:", remoteTrips);
   const dateEl = $("date");
   if (dateEl){
     const today = new Date();
@@ -821,4 +894,5 @@ function init(){
 }
 
 window.addEventListener("load", init);
+
 
