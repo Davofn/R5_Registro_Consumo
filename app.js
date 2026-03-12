@@ -1,3 +1,9 @@
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
+
+const SUPABASE_URL = "https://fzsioxqmpjmunaszrjdl.supabase.co";
+const SUPABASE_KEY = "TU_PUBLISHABLE_KEY_AQUI";
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 const BATTERY_KWH = 52;
 const DEFAULT_HOME_PRICE = 0.1176;
 const STORAGE_KEY = "r5_consumo_log_history";
@@ -815,3 +821,4 @@ function init(){
 }
 
 window.addEventListener("load", init);
+
