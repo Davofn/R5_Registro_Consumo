@@ -29,7 +29,6 @@
         <h2>Registra al instante</h2>
         <p>Consumo medio, coste estimado, histórico.</p>
       </div>
-      <!-- Si tienes la imagen en la raíz como r5.png, descomenta: -->
       <img class="hero-car" src="assets/r5.png" alt="Renault 5" />
     </div>
   </section>
@@ -38,7 +37,6 @@
     <section class="card">
       <h2>Nuevo trayecto</h2>
 
-      <!-- Odómetro actual -->
       <div class="summary odo">
         <div class="pill">
           <span>Odómetro actual</span>
@@ -181,13 +179,34 @@
         <div class="pill"><span>Total energía</span><strong id="totalKwh">—</strong></div>
         <div class="pill"><span>Media global</span><strong id="globalAvg">—</strong></div>
         <div class="pill"><span>Total coste</span><strong id="totalCost">—</strong></div>
-        <div class="pill"><span>Coste por 100kms</span><strong id="costPer100">—</strong></div>
+        <div class="pill"><span>Coste por 100 km</span><strong id="costPer100">—</strong></div>
       </div>
 
       <div class="summary summary-3">
         <div class="pill"><span>Consumo medio ciudad</span><strong id="avgCity">—</strong></div>
         <div class="pill"><span>Consumo medio mixto</span><strong id="avgMixed">—</strong></div>
         <div class="pill"><span>Consumo medio autopista</span><strong id="avgHighway">—</strong></div>
+      </div>
+
+      <div class="history-actions">
+        <button id="toggleDetails">📋 Mostrar detalle consumo</button>
+        <button id="toggleChart">📈 Mostrar gráfico</button>
+      </div>
+
+      <div id="chartSection" class="chart-section" style="display:none;">
+        <div class="chart-legend">
+          <div class="legend-item">
+            <span class="legend-dot city"></span> Ciudad
+          </div>
+          <div class="legend-item">
+            <span class="legend-dot mixed"></span> Mixto
+          </div>
+          <div class="legend-item">
+            <span class="legend-dot highway"></span> Autopista
+          </div>
+        </div>
+
+        <canvas id="consumptionChart"></canvas>
       </div>
 
       <div class="table-wrap">
@@ -209,48 +228,14 @@
           <tbody></tbody>
         </table>
       </div>
-      <div class="chart-toggle-wrap">
-  <button id="toggleChart">📈 Mostrar gráfico</button>
-   <div id="chartSection" style="display:none;">
-
-  <div class="chart-legend">
-    <div class="legend-item">
-      <span class="legend-dot city"></span> Ciudad
-    </div>
-    <div class="legend-item">
-      <span class="legend-dot mixed"></span> Mixto
-    </div>
-    <div class="legend-item">
-      <span class="legend-dot highway"></span> Autopista
-    </div>
-  </div>
-
-  <canvas id="consumptionChart"></canvas>
-
-</div>
-</div>
-
-<div id="chartSection" class="chart-section" style="display:none;">
-  <canvas id="consumptionChart"></canvas>
-</div>
-
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     </section>
   </main>
 
   <footer class="footer">
-    <small>v1.8.2 · Davo</small>
+    <small>v1.9 · Davo</small>
   </footer>
 
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
