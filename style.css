@@ -287,3 +287,14 @@ tr.stint-summary td{
   .summary-3 .pill{ max-width:none; }
   .filters{ grid-template-columns: 1fr 1fr; }
 }
+.chart-toggle-wrap{
+  margin-top: 14px;
+}
+
+.chart-section{
+  margin-top: 14px;
+  padding: 12px;
+  border-radius: 18px;
+  border: 1px solid rgba(255,255,255,.08);
+  background: rgba(0,0,0,.14);
+}
