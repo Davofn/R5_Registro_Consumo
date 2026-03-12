@@ -7,10 +7,13 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const BATTERY_KWH = 52;
 const DEFAULT_HOME_PRICE = 0.1176;
-const STORAGE_KEY = "r5_consumo_log_history";
 
 let consumptionChart = null;
 let showTripDetails = false;
+
+// Estado en memoria
+let currentTrips = [];      // solo trayectos reales desde Supabase
+let currentHistory = [];    // trayectos + resúmenes batería reconstruidos
 
 const $ = (id) => document.getElementById(id);
 
@@ -39,62 +42,6 @@ function fmtEUR(n){
   }).format(n);
 }
 
-// ===== Supabase (solo prueba de conexión por ahora) =====
-async function getHistoryFromSupabase(){
-  const { data, error } = await supabase
-    .from("trips")
-    .select("*")
-    .order("created_at", { ascending: true });
-
-  if (error){
-    console.error("Error cargando trips desde Supabase:", error);
-    return [];
-  }
-
-  return (data || []).map(rowToTrip);
-}
-
-async function insertTripToSupabase(entry){
-  const row = tripToRow(entry);
-
-  const { error } = await supabase
-    .from("trips")
-    .insert([row]);
-
-  if (error){
-    console.error("Error insertando trip en Supabase:", error);
-    throw error;
-  }
-}
-async function importTripsToSupabase(entries){
-  if (!entries.length) return { inserted: 0 };
-
-  const rows = entries.map(tripToRow);
-
-  const { error } = await supabase
-    .from("trips")
-    .insert(rows);
-
-  if (error){
-    console.error("Error importando CSV a Supabase:", error);
-    throw error;
-  }
-
-  return { inserted: rows.length };
-}
-// ===== Local storage (la app sigue usando esto por ahora) =====
-function getHistory(){
-  try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
-  } catch {
-    return [];
-  }
-}
-
-function saveHistory(arr){
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(arr));
-}
-
 function setMessage(text){
   const el = $("msg");
   if (el) el.textContent = text || "";
@@ -102,6 +49,14 @@ function setMessage(text){
 
 function isTripRow(e){
   return !e.kind || e.kind === "trip";
+}
+
+function getHistory(){
+  return currentHistory;
+}
+
+function getTrips(){
+  return currentTrips;
 }
 
 function tripToRow(entry){
@@ -128,6 +83,7 @@ function tripToRow(entry){
 function rowToTrip(row){
   return {
     kind: "trip",
+    id: row.id,
     date: row.trip_date,
     tripType: row.trip_type,
     climate: row.climate || "No",
@@ -147,6 +103,64 @@ function rowToTrip(row){
   };
 }
 
+// ===== Supabase =====
+async function fetchTripsFromSupabase(){
+  const { data, error } = await supabase
+    .from("trips")
+    .select("*")
+    .order("created_at", { ascending: true });
+
+  if (error){
+    console.error("Error cargando trips desde Supabase:", error);
+    throw error;
+  }
+
+  return (data || []).map(rowToTrip);
+}
+
+async function insertTripToSupabase(entry){
+  const row = tripToRow(entry);
+
+  const { error } = await supabase
+    .from("trips")
+    .insert([row]);
+
+  if (error){
+    console.error("Error insertando trip en Supabase:", error);
+    throw error;
+  }
+}
+
+async function importTripsToSupabase(entries){
+  if (!entries.length) return { inserted: 0 };
+
+  const rows = entries.map(tripToRow);
+
+  const { error } = await supabase
+    .from("trips")
+    .insert(rows);
+
+  if (error){
+    console.error("Error importando CSV a Supabase:", error);
+    throw error;
+  }
+
+  return { inserted: rows.length };
+}
+
+async function deleteAllTripsFromSupabase(){
+  const { error } = await supabase
+    .from("trips")
+    .delete()
+    .not("id", "is", null);
+
+  if (error){
+    console.error("Error borrando histórico en Supabase:", error);
+    throw error;
+  }
+}
+
+// ===== UI / cálculo =====
 function computeCurrent(){
   const kmStart = parseFloat($("kmStart")?.value);
   const kmEnd = parseFloat($("kmEnd")?.value);
@@ -211,15 +225,46 @@ function getFilteredHistory(all){
   });
 }
 
-// ===== Rebuild summaries tras importar =====
-function rebuildBatterySummaries(){
-  const history = getHistory().filter(isTripRow);
+// ===== Resúmenes batería =====
+function buildStintSummary(tripsBlock){
+  if (!tripsBlock.length) return null;
 
+  const first = tripsBlock[0];
+  const last = tripsBlock[tripsBlock.length - 1];
+
+  let km = 0;
+  let kwh = 0;
+  let cost = 0;
+
+  for (const t of tripsBlock){
+    km += Number(t.kmTrip) || 0;
+    kwh += Number(t.kwhUsed) || 0;
+    cost += Number(t.cost) || 0;
+  }
+
+  const avg = km > 0 ? (kwh / km) * 100 : NaN;
+  const socUsed = (Number(first.socStart) || 0) - (Number(last.socEnd) || 0);
+
+  return {
+    kind: "stintSummary",
+    date: last.date,
+    trips: tripsBlock.length,
+    km,
+    kwh,
+    avg,
+    socUsed,
+    cost,
+    socFrom: first.socStart,
+    socTo: last.socEnd
+  };
+}
+
+function buildHistoryWithSummaries(trips){
   const rebuilt = [];
   let block = [];
 
-  for (let i = 0; i < history.length; i++){
-    const cur = history[i];
+  for (let i = 0; i < trips.length; i++){
+    const cur = trips[i];
 
     if (block.length === 0){
       block.push(cur);
@@ -229,9 +274,10 @@ function rebuildBatterySummaries(){
 
     const prev = block[block.length - 1];
 
+    // Detecta recarga: el trayecto nuevo empieza con más batería que terminó el anterior
     if (cur.socStart > prev.socEnd + 1){
-      const summary = buildStintSummary(block, 0);
-      if (summary) rebuilt.push(summary);
+      const summary = buildStintSummary(block);
+      if (summary) rebuilt.push(summary); // resumen ANTES del nuevo trayecto
       block = [];
     }
 
@@ -239,7 +285,13 @@ function rebuildBatterySummaries(){
     rebuilt.push(cur);
   }
 
-  saveHistory(rebuilt);
+  return rebuilt;
+}
+
+async function loadHistoryFromSupabase(){
+  const trips = await fetchTripsFromSupabase();
+  currentTrips = trips;
+  currentHistory = buildHistoryWithSummaries(trips);
 }
 
 // ===== Odómetro y autorellenos =====
@@ -292,65 +344,6 @@ function autofillSocStartFromHistory(allHistory){
   }
 }
 
-// ===== Resumen por batería (stint) =====
-function getLastTrip(allHistory){
-  for (let i = allHistory.length - 1; i >= 0; i--){
-    if (isTripRow(allHistory[i])) return allHistory[i];
-  }
-  return null;
-}
-
-function findCurrentStintStartIndex(allHistory){
-  const tripsIdx = [];
-  for (let i = 0; i < allHistory.length; i++){
-    if (isTripRow(allHistory[i])) tripsIdx.push(i);
-  }
-
-  if (!tripsIdx.length) return -1;
-  if (tripsIdx.length === 1) return tripsIdx[0];
-
-  for (let t = tripsIdx.length - 1; t >= 1; t--){
-    const cur = allHistory[tripsIdx[t]];
-    const prev = allHistory[tripsIdx[t - 1]];
-    if (Number.isFinite(cur.socStart) && Number.isFinite(prev.socEnd) && cur.socStart > prev.socEnd + 1){
-      return tripsIdx[t];
-    }
-  }
-
-  return tripsIdx[0];
-}
-
-function buildStintSummary(allHistory, stintStartIndex){
-  const trips = allHistory.slice(stintStartIndex).filter(isTripRow);
-  if (!trips.length) return null;
-
-  const first = trips[0];
-  const last = trips[trips.length - 1];
-
-  let km = 0, kwh = 0, cost = 0;
-  for (const t of trips){
-    km += Number(t.kmTrip) || 0;
-    kwh += Number(t.kwhUsed) || 0;
-    cost += Number(t.cost) || 0;
-  }
-
-  const avg = km > 0 ? (kwh / km) * 100 : NaN;
-  const socUsed = (Number(first.socStart) || 0) - (Number(last.socEnd) || 0);
-
-  return {
-    kind: "stintSummary",
-    date: last.date,
-    trips: trips.length,
-    km,
-    kwh,
-    avg,
-    socUsed,
-    cost,
-    socFrom: first.socStart,
-    socTo: last.socEnd
-  };
-}
-
 // ===== Histórico =====
 function renderHistory(){
   const table = $("historyTable");
@@ -401,7 +394,6 @@ function renderHistory(){
   if ($("globalAvg")) $("globalAvg").textContent = fmtAvg(globalAvg);
   if ($("totalCost")) $("totalCost").textContent = fmtEUR(totalCost);
   if ($("costPer100")) $("costPer100").textContent = totalKm > 0 ? fmtEUR(costPer100) : "—";
-
   if ($("avgCity")) $("avgCity").textContent = fmtAvg(avgCity);
   if ($("avgMixed")) $("avgMixed").textContent = fmtAvg(avgMixed);
   if ($("avgHighway")) $("avgHighway").textContent = fmtAvg(avgHighway);
@@ -439,7 +431,7 @@ function renderHistory(){
       <td>${e.climate === "Sí" ? "❄️" : "—"}</td>
       <td>${e.seatsHeat === "Sí" ? "🔥" : "—"}</td>
       <td>${fmtNum(e.cost,2)}</td>
-      <td>${(e.notes || "").replace(/</g,"&lt;").replace(/>/g,"&gt;")}</td>
+      <td>${(e.notes || "").replace(/</g, "&lt;").replace(/>/g, "&gt;")}</td>
     `;
     tbody.appendChild(tr);
   });
@@ -448,18 +440,16 @@ function renderHistory(){
 // ===== CSV =====
 function csvEsc(v){
   const s = String(v ?? "");
-  if (/[",\n]/.test(s)) return '"' + s.replace(/"/g,'""') + '"';
+  if (/[",\n]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
   return s;
 }
 
 function exportCSV(){
-  const h = getHistory();
+  const h = getTrips();
   if (!h.length){
     setMessage("No hay datos para exportar.");
     return;
   }
-
-  const trips = h.filter(isTripRow);
 
   const headers = [
     "Fecha","Tipo","Km inicio","Km fin","Km",
@@ -470,7 +460,7 @@ function exportCSV(){
     "Notas"
   ];
 
-  const rows = trips.map(e => ([
+  const rows = h.map(e => ([
     e.date,
     e.tripType,
     e.kmStart,
@@ -490,7 +480,7 @@ function exportCSV(){
   ].map(csvEsc).join(",")));
 
   const csv = headers.join(",") + "\n" + rows.join("\n") + "\n";
-  const blob = new Blob([csv], {type:"text/csv;charset=utf-8"});
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
   const url = URL.createObjectURL(blob);
 
   const a = document.createElement("a");
@@ -585,7 +575,7 @@ function renderConsumptionChart(){
   const canvas = $("consumptionChart");
   if (!canvas || typeof Chart === "undefined") return;
 
-  const history = getHistory().filter(isTripRow);
+  const history = getTrips().filter(isTripRow);
   if (!history.length) return;
 
   const labels = history.map((e, i) => e.date || `Trayecto ${i + 1}`);
@@ -706,8 +696,7 @@ async function importCSVFile(file){
         return;
       }
 
-      // Leer lo que ya hay en Supabase para evitar duplicados
-      const remoteHistory = await getHistoryFromSupabase();
+      const remoteHistory = await fetchTripsFromSupabase();
       const existing = new Set(remoteHistory.map(entryKey));
 
       const entriesToInsert = [];
@@ -776,13 +765,10 @@ async function importCSVFile(file){
       }
 
       await importTripsToSupabase(entriesToInsert);
+      await loadHistoryFromSupabase();
+      renderHistory();
 
       setMessage(`Importación a Supabase completada. Importados: ${imported}. Duplicados omitidos: ${skipped}.`);
-
-      // opcional: verificación rápida en consola
-      const remoteTrips = await getHistoryFromSupabase();
-      console.log("Trips en Supabase tras importar:", remoteTrips);
-
     } catch (err) {
       console.error(err);
       setMessage("Error importando CSV a Supabase. Revisa la consola.");
@@ -793,7 +779,7 @@ async function importCSVFile(file){
 }
 
 // ===== Guardar / Limpiar =====
-function saveTrip(){
+async function saveTrip(){
   const c = computeCurrent();
 
   if (!Number.isFinite(c.kmStart) || !Number.isFinite(c.kmEnd)){
@@ -834,44 +820,39 @@ function saveTrip(){
     notes: ($("notes")?.value || "").trim()
   };
 
-  const history = getHistory();
+  try {
+    await insertTripToSupabase(entry);
+    await loadHistoryFromSupabase();
+    renderHistory();
 
-  const lastTrip = getLastTrip(history);
-  if (lastTrip && Number.isFinite(lastTrip.socEnd) && entry.socStart > lastTrip.socEnd + 1){
-    const startIdx = findCurrentStintStartIndex(history);
-    if (startIdx >= 0){
-      const summary = buildStintSummary(history, startIdx);
-      if (summary){
-        history.push(summary);
-      }
-    }
+    if ($("kmStart")) $("kmStart").value = c.kmEnd;
+    if ($("kmEnd")) $("kmEnd").value = "";
+    if ($("notes")) $("notes").value = "";
+
+    setMessage("Trayecto guardado en Supabase.");
+    computeCurrent();
+  } catch (err) {
+    console.error(err);
+    setMessage("Error guardando el trayecto en Supabase.");
   }
-
-  history.push(entry);
-  saveHistory(history);
-  renderHistory();
-
-  if ($("kmStart")) $("kmStart").value = c.kmEnd;
-  if ($("kmEnd")) $("kmEnd").value = "";
-  if ($("notes")) $("notes").value = "";
-
-  setMessage("Trayecto guardado.");
-  computeCurrent();
 }
 
-function clearHistory(){
-  localStorage.removeItem(STORAGE_KEY);
-  renderHistory();
-  setMessage("Histórico borrado.");
+async function clearHistory(){
+  try {
+    await deleteAllTripsFromSupabase();
+    await loadHistoryFromSupabase();
+    renderHistory();
+    setMessage("Histórico borrado en Supabase.");
+  } catch (err) {
+    console.error(err);
+    setMessage("Error borrando el histórico en Supabase.");
+  }
 }
 
 // ===== Inicialización =====
 async function init(){
   setupDetailsToggle();
   setupChartToggle();
-
-  const remoteTrips = await getHistoryFromSupabase();
-  console.log("Trips en Supabase:", remoteTrips);
 
   const dateEl = $("date");
   if (dateEl){
@@ -884,6 +865,15 @@ async function init(){
 
   applyPriceUI();
   computeCurrent();
+
+  try {
+    await loadHistoryFromSupabase();
+    console.log("Trips en Supabase:", getTrips());
+  } catch (err) {
+    console.error(err);
+    setMessage("No se pudo cargar el histórico desde Supabase.");
+  }
+
   renderHistory();
 
   const watchIds = ["kmStart","kmEnd","socStart","socEnd","notes","tripType","date","climate","seatsHeat"];
@@ -925,5 +915,3 @@ async function init(){
 }
 
 window.addEventListener("load", init);
-
-
