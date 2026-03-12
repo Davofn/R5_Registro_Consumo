@@ -1,7 +1,10 @@
 const BATTERY_KWH = 52;
 const DEFAULT_HOME_PRICE = 0.1176;
 const STORAGE_KEY = "r5_consumo_log_history";
+
 let consumptionChart = null;
+let showTripDetails = false;
+
 const $ = (id) => document.getElementById(id);
 
 function clamp(n, min, max){
@@ -16,18 +19,24 @@ function fmtNum(n, digits=2){
     minimumFractionDigits: digits
   }).format(n);
 }
+
 function fmtKwh(n){ return Number.isFinite(n) ? `${fmtNum(n,2)} kWh` : "—"; }
 function fmtKm(n){ return Number.isFinite(n) ? `${fmtNum(n,1)} km` : "—"; }
 function fmtAvg(n){ return Number.isFinite(n) ? `${fmtNum(n,1)} kWh/100km` : "—"; }
+
 function fmtEUR(n){
   if (!Number.isFinite(n)) return "—";
   return new Intl.NumberFormat("es-ES", { style:"currency", currency:"EUR" }).format(n);
 }
 
 function getHistory(){
-  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]"); }
-  catch { return []; }
+  try {
+    return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+  } catch {
+    return [];
+  }
 }
+
 function saveHistory(arr){
   localStorage.setItem(STORAGE_KEY, JSON.stringify(arr));
 }
@@ -84,7 +93,8 @@ function applyPriceUI(){
   }
 }
 
-// ===== Filtros (las filas de resumen SIEMPRE se muestran) =====
+// ===== Filtros =====
+// Las filas de resumen batería siempre se muestran.
 function getFilteredHistory(all){
   const type = $("filterType")?.value || "Todos";
   const extras = $("filterExtras")?.value || "Todos";
@@ -104,8 +114,10 @@ function getFilteredHistory(all){
     return true;
   });
 }
+
+// ===== Rebuild summaries tras importar =====
 function rebuildBatterySummaries(){
-  const history = getHistory();
+  const history = getHistory().filter(isTripRow);
 
   const rebuilt = [];
   let block = [];
@@ -122,9 +134,8 @@ function rebuildBatterySummaries(){
     const prev = block[block.length - 1];
 
     if (cur.socStart > prev.socEnd + 1){
-      const summary = buildStintSummary(block);
+      const summary = buildStintSummary(block, 0);
       if (summary) rebuilt.push(summary);
-
       block = [];
     }
 
@@ -134,12 +145,12 @@ function rebuildBatterySummaries(){
 
   saveHistory(rebuilt);
 }
-// ===== Odómetro + autorellenos (siempre usando histórico completo sin filtros) =====
+
+// ===== Odómetro y autorellenos =====
 function updateOdometerUI(allHistory){
   const el = $("odoNow");
   if (!el) return;
 
-  // buscar último trayecto real
   for (let i = allHistory.length - 1; i >= 0; i--){
     const e = allHistory[i];
     if (isTripRow(e) && Number.isFinite(e.kmEnd)){
@@ -151,7 +162,6 @@ function updateOdometerUI(allHistory){
 }
 
 function autofillKmStartFromHistory(allHistory){
-  // último kmEnd del último trayecto
   let lastKmEnd = null;
   for (let i = allHistory.length - 1; i >= 0; i--){
     const e = allHistory[i];
@@ -160,6 +170,7 @@ function autofillKmStartFromHistory(allHistory){
       break;
     }
   }
+
   const input = $("kmStart");
   if (input && !String(input.value ?? "").trim() && Number.isFinite(lastKmEnd)){
     input.value = lastKmEnd;
@@ -167,7 +178,6 @@ function autofillKmStartFromHistory(allHistory){
 }
 
 function autofillSocStartFromHistory(allHistory){
-  // último socEnd del último trayecto
   let lastSocEnd = null;
   for (let i = allHistory.length - 1; i >= 0; i--){
     const e = allHistory[i];
@@ -176,16 +186,17 @@ function autofillSocStartFromHistory(allHistory){
       break;
     }
   }
+
   const input = $("socStart");
   if (!input || !Number.isFinite(lastSocEnd)) return;
 
   const v = String(input.value ?? "").trim();
-  if (v === "" || v === "80"){ // no pisar si el usuario ya puso otro valor
+  if (v === "" || v === "80"){
     input.value = lastSocEnd;
   }
 }
 
-// ===== Resumen por batería (“stint”) =====
+// ===== Resumen por batería (stint) =====
 function getLastTrip(allHistory){
   for (let i = allHistory.length - 1; i >= 0; i--){
     if (isTripRow(allHistory[i])) return allHistory[i];
@@ -193,12 +204,12 @@ function getLastTrip(allHistory){
   return null;
 }
 
-// encuentra el inicio del bloque actual desde la última recarga
 function findCurrentStintStartIndex(allHistory){
   const tripsIdx = [];
   for (let i = 0; i < allHistory.length; i++){
     if (isTripRow(allHistory[i])) tripsIdx.push(i);
   }
+
   if (!tripsIdx.length) return -1;
   if (tripsIdx.length === 1) return tripsIdx[0];
 
@@ -209,6 +220,7 @@ function findCurrentStintStartIndex(allHistory){
       return tripsIdx[t];
     }
   }
+
   return tripsIdx[0];
 }
 
@@ -254,17 +266,17 @@ function renderHistory(){
 
   const allHistory = getHistory();
 
-  // UI helpers (no dependen de filtros)
   updateOdometerUI(allHistory);
   autofillKmStartFromHistory(allHistory);
   autofillSocStartFromHistory(allHistory);
 
   const visible = getFilteredHistory(allHistory);
-
-  // stats: SOLO trayectos (nunca sumar resúmenes)
   const visibleTrips = visible.filter(isTripRow);
 
-  let totalKm = 0, totalKwh = 0, totalCost = 0;
+  let totalKm = 0;
+  let totalKwh = 0;
+  let totalCost = 0;
+
   const byType = {
     "Ciudad": { km: 0, kwh: 0 },
     "Mixto": { km: 0, kwh: 0 },
@@ -292,12 +304,12 @@ function renderHistory(){
   if ($("totalKwh")) $("totalKwh").textContent = fmtKwh(totalKwh);
   if ($("globalAvg")) $("globalAvg").textContent = fmtAvg(globalAvg);
   if ($("totalCost")) $("totalCost").textContent = fmtEUR(totalCost);
-  if ($("costPer100")) $("costPer100").textContent = fmtEUR(costPer100);
+  if ($("costPer100")) $("costPer100").textContent = totalKm > 0 ? fmtEUR(costPer100) : "—";
+
   if ($("avgCity")) $("avgCity").textContent = fmtAvg(avgCity);
   if ($("avgMixed")) $("avgMixed").textContent = fmtAvg(avgMixed);
   if ($("avgHighway")) $("avgHighway").textContent = fmtAvg(avgHighway);
 
-  // render filas
   visible.forEach(e => {
     const tr = document.createElement("tr");
 
@@ -318,6 +330,8 @@ function renderHistory(){
       tbody.appendChild(tr);
       return;
     }
+
+    if (!showTripDetails) return;
 
     tr.innerHTML = `
       <td>${e.date}</td>
@@ -349,7 +363,6 @@ function exportCSV(){
     return;
   }
 
-  // exporta SOLO trayectos (para CSV limpio)
   const trips = h.filter(isTripRow);
 
   const headers = [
@@ -401,20 +414,42 @@ function parseCSV(text){
 
   for (let i = 0; i < text.length; i++){
     const ch = text[i];
+
     if (inQuotes){
       if (ch === '"'){
-        if (text[i + 1] === '"'){ cur += '"'; i++; }
-        else inQuotes = false;
-      } else cur += ch;
+        if (text[i + 1] === '"'){
+          cur += '"';
+          i++;
+        } else {
+          inQuotes = false;
+        }
+      } else {
+        cur += ch;
+      }
     } else {
-      if (ch === '"') inQuotes = true;
-      else if (ch === ","){ row.push(cur); cur = ""; }
-      else if (ch === "\n"){ row.push(cur); rows.push(row); row = []; cur = ""; }
-      else if (ch === "\r"){ /* ignore */ }
-      else cur += ch;
+      if (ch === '"'){
+        inQuotes = true;
+      } else if (ch === ","){
+        row.push(cur);
+        cur = "";
+      } else if (ch === "\n"){
+        row.push(cur);
+        rows.push(row);
+        row = [];
+        cur = "";
+      } else if (ch === "\r"){
+        // ignore
+      } else {
+        cur += ch;
+      }
     }
   }
-  if (cur.length > 0 || row.length > 0){ row.push(cur); rows.push(row); }
+
+  if (cur.length > 0 || row.length > 0){
+    row.push(cur);
+    rows.push(row);
+  }
+
   return rows;
 }
 
@@ -430,10 +465,10 @@ function entryKey(e){
   ].join("|");
 }
 
+// ===== Gráfico =====
 function setupChartToggle(){
   const btn = $("toggleChart");
   const section = $("chartSection");
-
   if (!btn || !section) return;
 
   btn.addEventListener("click", () => {
@@ -449,19 +484,25 @@ function setupChartToggle(){
     }
   });
 }
-function renderConsumptionChart(){
 
+function renderConsumptionChart(){
   const canvas = $("consumptionChart");
   if (!canvas || typeof Chart === "undefined") return;
 
   const history = getHistory().filter(isTripRow);
-
   if (!history.length) return;
 
-  const labels = history.map((e,i) => e.date || `Trayecto ${i+1}`);
+  const labels = history.map((e, i) => e.date || `Trayecto ${i + 1}`);
   const data = history.map(e => Number(e.avg) || 0);
+  const tripTypes = history.map(e => e.tripType || "Mixto");
 
-  // calcular escala dinámica
+  function getTypeColor(type){
+    if (type === "Ciudad") return "#22c55e";
+    if (type === "Autopista") return "#3b82f6";
+    return "#ffd400";
+  }
+
+  const pointColors = tripTypes.map(getTypeColor);
   const maxValue = Math.max(...data, 10);
   const maxY = Math.ceil(maxValue / 10) * 10;
 
@@ -470,38 +511,48 @@ function renderConsumptionChart(){
   }
 
   consumptionChart = new Chart(canvas, {
-
     type: "line",
-
     data: {
-      labels: labels,
+      labels,
       datasets: [{
         label: "Consumo (kWh/100km)",
-        data: data,
-        borderColor: "#ffd400",
-        backgroundColor: "rgba(255,212,0,0.15)",
+        data,
+        borderColor: "#a7b0c0",
+        backgroundColor: "rgba(255,255,255,0.04)",
         borderWidth: 2,
         tension: 0.25,
-        pointRadius: 4,
-        pointBackgroundColor: "#ffd400",
-        pointBorderWidth: 0
+        pointRadius: 5,
+        pointHoverRadius: 7,
+        pointBackgroundColor: pointColors,
+        pointBorderColor: pointColors,
+        pointBorderWidth: 0,
+        fill: false,
+        segment: {
+          borderColor: "#6b7280"
+        }
       }]
     },
-
     options: {
       responsive: true,
       maintainAspectRatio: true,
-
       plugins: {
         legend: {
           labels: {
             color: "#eef2ff"
           }
+        },
+        tooltip: {
+          callbacks: {
+            label: function(context){
+              const idx = context.dataIndex;
+              const type = tripTypes[idx];
+              const value = context.parsed.y;
+              return `${type}: ${value.toFixed(1)} kWh/100km`;
+            }
+          }
         }
       },
-
       scales: {
-
         x: {
           ticks: {
             color: "#a7b0c0"
@@ -510,7 +561,6 @@ function renderConsumptionChart(){
             color: "rgba(255,255,255,.06)"
           }
         },
-
         y: {
           min: 0,
           max: maxY,
@@ -522,29 +572,50 @@ function renderConsumptionChart(){
             color: "rgba(255,255,255,.06)"
           }
         }
-
       }
     }
-
   });
-
 }
+
+// ===== Detalle consumo =====
+function setupDetailsToggle(){
+  const btn = $("toggleDetails");
+  if (!btn) return;
+
+  btn.addEventListener("click", () => {
+    showTripDetails = !showTripDetails;
+    btn.textContent = showTripDetails
+      ? "📄 Ocultar detalle consumo"
+      : "📋 Mostrar detalle consumo";
+
+    renderHistory();
+  });
+}
+
+// ===== Importar CSV =====
 function importCSVFile(file){
   const reader = new FileReader();
 
   reader.onload = (ev) => {
     const text = String(ev.target.result || "").trim();
-    if (!text){ setMessage("El CSV está vacío."); return; }
+    if (!text){
+      setMessage("El CSV está vacío.");
+      return;
+    }
 
     const rows = parseCSV(text);
-    if (rows.length < 2){ setMessage("CSV sin datos (solo cabecera)."); return; }
+    if (rows.length < 2){
+      setMessage("CSV sin datos (solo cabecera).");
+      return;
+    }
 
     const replace = $("replaceOnImport")?.checked;
     let history = replace ? [] : getHistory();
-    history = history.filter(isTripRow); // al importar, nos quedamos con trips
+    history = history.filter(isTripRow);
 
     const existing = new Set(history.map(entryKey));
-    let imported = 0, skipped = 0;
+    let imported = 0;
+    let skipped = 0;
 
     for (let r = 1; r < rows.length; r++){
       const cols = rows[r];
@@ -563,7 +634,6 @@ function importCSVFile(file){
       const external = (cols[10] || "").trim().toLowerCase() === "sí";
       const price = parseFloat(cols[11]);
       const cost = parseFloat(cols[12]);
-
       const climate = (cols[13] || "").trim() || "No";
       const seatsHeat = (cols[14] || "").trim() || "No";
       const notes = (cols[15] || "").trim();
@@ -591,7 +661,11 @@ function importCSVFile(file){
       };
 
       const key = entryKey(entry);
-      if (existing.has(key)){ skipped++; continue; }
+      if (existing.has(key)){
+        skipped++;
+        continue;
+      }
+
       existing.add(key);
       history.push(entry);
       imported++;
@@ -655,14 +729,12 @@ function saveTrip(){
 
   const history = getHistory();
 
-  // detectar recarga: socStart nuevo > socEnd del último trayecto
   const lastTrip = getLastTrip(history);
   if (lastTrip && Number.isFinite(lastTrip.socEnd) && entry.socStart > lastTrip.socEnd + 1){
     const startIdx = findCurrentStintStartIndex(history);
     if (startIdx >= 0){
       const summary = buildStintSummary(history, startIdx);
       if (summary){
-        // ✅ resumen ANTES del trayecto que inicia tras recarga
         history.push(summary);
       }
     }
@@ -672,7 +744,6 @@ function saveTrip(){
   saveHistory(history);
   renderHistory();
 
-  // UX: siguiente trayecto empieza con el Km fin anterior
   if ($("kmStart")) $("kmStart").value = c.kmEnd;
   if ($("kmEnd")) $("kmEnd").value = "";
   if ($("notes")) $("notes").value = "";
@@ -687,14 +758,17 @@ function clearHistory(){
   setMessage("Histórico borrado.");
 }
 
+// ===== Inicialización =====
 function init(){
+  setupDetailsToggle();
   setupChartToggle();
+
   const dateEl = $("date");
   if (dateEl){
     const today = new Date();
     const yyyy = today.getFullYear();
-    const mm = String(today.getMonth()+1).padStart(2,"0");
-    const dd = String(today.getDate()).padStart(2,"0");
+    const mm = String(today.getMonth() + 1).padStart(2, "0");
+    const dd = String(today.getDate()).padStart(2, "0");
     dateEl.value = `${yyyy}-${mm}-${dd}`;
   }
 
@@ -716,8 +790,8 @@ function init(){
       computeCurrent();
     });
   }
-  if ($("price")) $("price").addEventListener("input", computeCurrent);
 
+  if ($("price")) $("price").addEventListener("input", computeCurrent);
   if ($("saveTrip")) $("saveTrip").addEventListener("click", saveTrip);
   if ($("exportCSV")) $("exportCSV").addEventListener("click", exportCSV);
   if ($("clearHistory")) $("clearHistory").addEventListener("click", clearHistory);
@@ -736,13 +810,8 @@ function init(){
   if ($("filterExtras")) $("filterExtras").addEventListener("change", renderHistory);
 
   if ("serviceWorker" in navigator){
-    navigator.serviceWorker.register("./service-worker.js").catch(()=>{});
+    navigator.serviceWorker.register("./service-worker.js").catch(() => {});
   }
 }
 
 window.addEventListener("load", init);
-
-
-
-
-
