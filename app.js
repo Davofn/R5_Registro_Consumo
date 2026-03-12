@@ -429,63 +429,7 @@ function entryKey(e){
     e.seatsHeat || "No"
   ].join("|");
 }
-function renderConsumptionChart(){
-  const canvas = $("consumptionChart");
-  if (!canvas || typeof Chart === "undefined") return;
 
-  const history = getHistory().filter(isTripRow);
-
-  const labels = history.map((e, i) => e.date || `Trayecto ${i+1}`);
-  const data = history.map(e => Number(e.avg) || 0);
-
-  if (consumptionChart){
-    consumptionChart.destroy();
-  }
-
-  consumptionChart = new Chart(canvas, {
-    type: "line",
-    data: {
-      labels,
-      datasets: [{
-        label: "Consumo (kWh/100km)",
-        data,
-        tension: 0.25,
-        fill: false,
-        borderWidth: 2,
-        pointRadius: 3
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: true,
-      plugins: {
-        legend: {
-          labels: {
-            color: "#eef2ff"
-          }
-        }
-      },
-      scales: {
-        x: {
-          ticks: {
-            color: "#a7b0c0"
-          },
-          grid: {
-            color: "rgba(255,255,255,.06)"
-          }
-        },
-        y: {
-          ticks: {
-            color: "#a7b0c0"
-          },
-          grid: {
-            color: "rgba(255,255,255,.06)"
-          }
-        }
-      }
-    }
-  });
-}
 function setupChartToggle(){
   const btn = $("toggleChart");
   const section = $("chartSection");
@@ -505,7 +449,86 @@ function setupChartToggle(){
     }
   });
 }
+function renderConsumptionChart(){
 
+  const canvas = $("consumptionChart");
+  if (!canvas || typeof Chart === "undefined") return;
+
+  const history = getHistory().filter(isTripRow);
+
+  if (!history.length) return;
+
+  const labels = history.map((e,i) => e.date || `Trayecto ${i+1}`);
+  const data = history.map(e => Number(e.avg) || 0);
+
+  // calcular escala dinámica
+  const maxValue = Math.max(...data, 10);
+  const maxY = Math.ceil(maxValue / 10) * 10;
+
+  if (consumptionChart){
+    consumptionChart.destroy();
+  }
+
+  consumptionChart = new Chart(canvas, {
+
+    type: "line",
+
+    data: {
+      labels: labels,
+      datasets: [{
+        label: "Consumo (kWh/100km)",
+        data: data,
+        borderColor: "#ffd400",
+        backgroundColor: "rgba(255,212,0,0.15)",
+        borderWidth: 2,
+        tension: 0.25,
+        pointRadius: 4,
+        pointBackgroundColor: "#ffd400",
+        pointBorderWidth: 0
+      }]
+    },
+
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+
+      plugins: {
+        legend: {
+          labels: {
+            color: "#eef2ff"
+          }
+        }
+      },
+
+      scales: {
+
+        x: {
+          ticks: {
+            color: "#a7b0c0"
+          },
+          grid: {
+            color: "rgba(255,255,255,.06)"
+          }
+        },
+
+        y: {
+          min: 0,
+          max: maxY,
+          ticks: {
+            stepSize: 10,
+            color: "#a7b0c0"
+          },
+          grid: {
+            color: "rgba(255,255,255,.06)"
+          }
+        }
+
+      }
+    }
+
+  });
+
+}
 function importCSVFile(file){
   const reader = new FileReader();
 
@@ -718,6 +741,7 @@ function init(){
 }
 
 window.addEventListener("load", init);
+
 
 
 
