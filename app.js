@@ -1,7 +1,7 @@
 const BATTERY_KWH = 52;
 const DEFAULT_HOME_PRICE = 0.1176;
 const STORAGE_KEY = "r5_consumo_log_history";
-
+let consumptionChart = null;
 const $ = (id) => document.getElementById(id);
 
 function clamp(n, min, max){
@@ -429,6 +429,82 @@ function entryKey(e){
     e.seatsHeat || "No"
   ].join("|");
 }
+function renderConsumptionChart(){
+  const canvas = $("consumptionChart");
+  if (!canvas || typeof Chart === "undefined") return;
+
+  const history = getHistory().filter(isTripRow);
+
+  const labels = history.map((e, i) => e.date || `Trayecto ${i+1}`);
+  const data = history.map(e => Number(e.avg) || 0);
+
+  if (consumptionChart){
+    consumptionChart.destroy();
+  }
+
+  consumptionChart = new Chart(canvas, {
+    type: "line",
+    data: {
+      labels,
+      datasets: [{
+        label: "Consumo (kWh/100km)",
+        data,
+        tension: 0.25,
+        fill: false,
+        borderWidth: 2,
+        pointRadius: 3
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      plugins: {
+        legend: {
+          labels: {
+            color: "#eef2ff"
+          }
+        }
+      },
+      scales: {
+        x: {
+          ticks: {
+            color: "#a7b0c0"
+          },
+          grid: {
+            color: "rgba(255,255,255,.06)"
+          }
+        },
+        y: {
+          ticks: {
+            color: "#a7b0c0"
+          },
+          grid: {
+            color: "rgba(255,255,255,.06)"
+          }
+        }
+      }
+    }
+  });
+}
+function setupChartToggle(){
+  const btn = $("toggleChart");
+  const section = $("chartSection");
+
+  if (!btn || !section) return;
+
+  btn.addEventListener("click", () => {
+    const isHidden = section.style.display === "none";
+
+    if (isHidden){
+      section.style.display = "block";
+      btn.textContent = "📉 Ocultar gráfico";
+      renderConsumptionChart();
+    } else {
+      section.style.display = "none";
+      btn.textContent = "📈 Mostrar gráfico";
+    }
+  });
+}
 
 function importCSVFile(file){
   const reader = new FileReader();
@@ -589,6 +665,7 @@ function clearHistory(){
 }
 
 function init(){
+  setupChartToggle();
   const dateEl = $("date");
   if (dateEl){
     const today = new Date();
@@ -641,6 +718,7 @@ function init(){
 }
 
 window.addEventListener("load", init);
+
 
 
 
