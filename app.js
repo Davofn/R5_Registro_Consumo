@@ -385,6 +385,7 @@ function renderHistory(){
 
   const globalAvg = totalKm > 0 ? (totalKwh / totalKm) * 100 : NaN;
   const costPer100 = totalKm > 0 ? (totalCost / totalKm) * 100 : NaN;
+  const realRange = Number.isFinite(globalAvg) && globalAvg > 0 ? (BATTERY_KWH / globalAvg) * 100 : NaN;
   const avgCity = byType["Ciudad"].km > 0 ? (byType["Ciudad"].kwh / byType["Ciudad"].km) * 100 : NaN;
   const avgMixed = byType["Mixto"].km > 0 ? (byType["Mixto"].kwh / byType["Mixto"].km) * 100 : NaN;
   const avgHighway = byType["Autopista"].km > 0 ? (byType["Autopista"].kwh / byType["Autopista"].km) * 100 : NaN;
@@ -392,6 +393,7 @@ function renderHistory(){
   if ($("totalKm")) $("totalKm").textContent = fmtKm(totalKm);
   if ($("totalKwh")) $("totalKwh").textContent = fmtKwh(totalKwh);
   if ($("globalAvg")) $("globalAvg").textContent = fmtAvg(globalAvg);
+  if ($("realRange")) $("realRange").textContent = Number.isFinite(realRange) ? fmtKm(realRange) : "—";
   if ($("totalCost")) $("totalCost").textContent = fmtEUR(totalCost);
   if ($("costPer100")) $("costPer100").textContent = totalKm > 0 ? fmtEUR(costPer100) : "—";
   if ($("avgCity")) $("avgCity").textContent = fmtAvg(avgCity);
