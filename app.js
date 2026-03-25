@@ -107,15 +107,20 @@ function rowToTrip(row){
 async function fetchTripsFromSupabase(){
   const { data, error } = await supabase
     .from("trips")
-    .select("*")
-    .order("created_at", { ascending: true });
+    .select("*"); // quitamos el order de Supabase
 
   if (error){
     console.error("Error cargando trips desde Supabase:", error);
     throw error;
   }
 
-  return (data || []).map(rowToTrip);
+  return (data || [])
+    .map(rowToTrip)
+    .sort((a, b) => {
+      const [d1, m1, y1] = a.date.split("/").map(Number);
+      const [d2, m2, y2] = b.date.split("/").map(Number);
+      return new Date(y1, m1 - 1, d1) - new Date(y2, m2 - 1, d2);
+    });
 }
 
 async function insertTripToSupabase(entry){
