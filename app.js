@@ -471,7 +471,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const detailRows = summary.trips.map(trip => {
         const climaIcon = trip.climate === "Sí" ? "❄️" : "—";
-        const asientosIcon = trip.seatsHeat === "Sí" ? "🪑" : "—";
+        const asientosIcon = trip.seatsHeat === "Sí" ? "🔥" : "—";
         const typeClass = trip.tripType === "Ciudad" ? "type-city" : trip.tripType === "Mixto" ? "type-mixed" : "type-highway";
         return `
         <div class="trip-detail-row">
@@ -481,11 +481,11 @@ document.addEventListener("DOMContentLoaded", () => {
             <span class="trip-detail-soc">🔋 ${trip.socStart}% → ${trip.socEnd}%</span>
           </div>
           <div class="trip-detail-line2">
-            <span><strong>${formatKm(trip.kmTrip)}</strong></span>
-            <span><strong>${formatAvg(trip.avg)}</strong><small>/100km</small></span>
+            <span>${formatKm(trip.kmTrip)}</span>
+            <span>${formatAvg(trip.avg)}<small>/100km</small></span>
             <span>${climaIcon} <small>clima</small></span>
             <span>${asientosIcon} <small>asientos</small></span>
-            <span><strong>${formatEuro(trip.cost)}</strong></span>
+            <span>${formatEuro(trip.cost)}</span>
           </div>
           ${trip.notes ? `<div class="trip-detail-notes">${trip.notes}</div>` : ""}
         </div>
