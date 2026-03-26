@@ -469,20 +469,27 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const detailsId = `stint-details-${idx}`;
 
-      const detailRows = summary.trips.map(trip => `
+      const detailRows = summary.trips.map(trip => {
+        const climaIcon = trip.climate === "Sí" ? "❄️" : "—";
+        const asientosIcon = trip.seatsHeat === "Sí" ? "🪑" : "—";
+        const typeClass = trip.tripType === "Ciudad" ? "type-city" : trip.tripType === "Mixto" ? "type-mixed" : "type-highway";
+        return `
         <div class="trip-detail-row">
-          <div>
-            <strong>${trip.date}</strong>
-            <span>${trip.tripType}</span>
+          <div class="trip-detail-line1">
+            <span class="trip-detail-date">${trip.date}</span>
+            <span class="type-chip ${typeClass}">${trip.tripType}</span>
+            <span class="trip-detail-soc">🔋 ${trip.socStart}% → ${trip.socEnd}%</span>
           </div>
-          <div>${formatKm(trip.kmTrip)}</div>
-          <div>${formatAvg(trip.avg)}</div>
-          <div>${formatEuro(trip.cost)}</div>
+          <div class="trip-detail-line2">
+            <span><strong>${formatKm(trip.kmTrip)}</strong></span>
+            <span><strong>${formatAvg(trip.avg)}</strong><small>/100km</small></span>
+            <span>${climaIcon} <small>clima</small></span>
+            <span>${asientosIcon} <small>asientos</small></span>
+            <span><strong>${formatEuro(trip.cost)}</strong></span>
+          </div>
+          ${trip.notes ? `<div class="trip-detail-notes">${trip.notes}</div>` : ""}
         </div>
-        <div class="trip-detail-meta">
-          SOC ${trip.socStart}% → ${trip.socEnd}% · ${trip.climate} clima · ${trip.seatsHeat} asientos${trip.notes ? ` · ${trip.notes}` : ""}
-        </div>
-      `).join("");
+      `}).join("");
 
       card.innerHTML = `
         <div class="stint-summary">
