@@ -881,21 +881,80 @@ select:focus{
 
 @media (max-width: 640px){
   .container{
-    padding:14px 12px 24px;
+    padding:8px 8px 20px;
   }
 
   .hero-card,
   .tabs-card,
   .modal-sheet{
-    padding:16px;
+    padding:12px;
+  }
+
+  .hero-card{
+    border-radius:20px;
+  }
+
+  .tabs-card{
+    margin-top:8px;
+    border-radius:20px;
+  }
+
+  .hero-top{
+    gap:8px;
   }
 
   .hero-top h2{
-    font-size:24px;
+    font-size:22px;
+  }
+
+  .eyebrow{
+    font-size:13px;
+  }
+
+  .hero-subtitle{
+    font-size:12px;
+    margin-top:4px;
+  }
+
+  .hero-odometer{
+    margin:14px 0 12px;
+    gap:4px;
   }
 
   .hero-odometer strong{
-    font-size:36px;
+    font-size:30px;
+  }
+
+  .hero-metrics{
+    grid-template-columns:repeat(2,1fr);
+    gap:8px;
+  }
+
+  .metric-card{
+    padding:10px;
+    min-height:76px;
+    align-items:center;
+    text-align:center;
+    border-radius:16px;
+  }
+
+  .metric-card span{
+    font-size:0.72rem;
+    text-align:center;
+  }
+
+  .metric-card strong{
+    font-size:20px;
+    text-align:center;
+  }
+
+  .hero-actions{
+    margin-top:10px;
+  }
+
+  .cta{
+    padding:13px 16px;
+    font-size:15px;
   }
 
   .filters-grid,
@@ -904,10 +963,6 @@ select:focus{
   .computed-grid,
   .last-stint-box{
     grid-template-columns:1fr;
-  }
-
-  .hero-metrics{
-    grid-template-columns:repeat(2,1fr);
   }
 
   .history-toolbar,
@@ -934,15 +989,13 @@ select:focus{
     font-size:20px;
   }
 
-  .metric-card strong{
-    font-size:24px;
-  }
-
   .tabs{
     width:100%;
   }
 
   .tab{
     flex:1;
+    padding:10px 6px;
+    font-size:13px;
   }
 }
