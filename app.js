@@ -532,22 +532,39 @@ document.addEventListener("DOMContentLoaded", () => {
       return "#f59e0b";
     });
 
+    const avgValue = data.length
+      ? Number((data.reduce((s, v) => s + v, 0) / data.length).toFixed(2))
+      : 0;
+    const avgLine = data.map(() => avgValue);
+
     if (chartInstance) chartInstance.destroy();
 
     chartInstance = new Chart(chartCanvas, {
       type: "line",
       data: {
         labels,
-        datasets: [{
-          label: "kWh/100 km",
-          data,
-          borderColor: "#ffd400",
-          backgroundColor: "rgba(255,212,0,0.15)",
-          tension: 0.25,
-          fill: true,
-          pointRadius: 5,
-          pointBackgroundColor: pointColors
-        }]
+        datasets: [
+          {
+            label: "kWh/100 km",
+            data,
+            borderColor: "#ffd400",
+            backgroundColor: "rgba(255,212,0,0.15)",
+            tension: 0.25,
+            fill: true,
+            pointRadius: 5,
+            pointBackgroundColor: pointColors
+          },
+          {
+            label: `Media: ${avgValue.toFixed(1).replace(".", ",")} kWh`,
+            data: avgLine,
+            borderColor: "#ff5d73",
+            borderWidth: 2,
+            borderDash: [6, 4],
+            pointRadius: 0,
+            fill: false,
+            tension: 0
+          }
+        ]
       },
       options: {
         responsive: true,
@@ -555,6 +572,14 @@ document.addEventListener("DOMContentLoaded", () => {
         scales: {
           y: {
             beginAtZero: false
+          }
+        },
+        plugins: {
+          legend: {
+            labels: {
+              color: "#97a3bb",
+              font: { size: 12 }
+            }
           }
         }
       }
