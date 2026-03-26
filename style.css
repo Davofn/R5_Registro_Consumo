@@ -568,7 +568,7 @@ select:focus{
 }
 
 .trip-detail-line2 span{
-  font-size:.85rem;
+  font-size:.82rem;
   color:var(--muted);
   display:flex;
   align-items:baseline;
@@ -577,7 +577,8 @@ select:focus{
 
 .trip-detail-line2 strong{
   color:var(--text);
-  font-size:.95rem;
+  font-size:.82rem;
+  font-weight:400;
 }
 
 .trip-detail-line2 small{
