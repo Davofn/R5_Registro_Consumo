@@ -11,236 +11,278 @@
   <link rel="apple-touch-icon" href="icons/icon-192.png" />
   <link rel="stylesheet" href="style.css" />
 </head>
-
 <body>
   <header class="app-header">
     <div class="brand">
-      <img class="brand-icon" src="icons/icon-192.png" alt="R5" />
-      <div>
-        <h1>R5 Registro de Consumo</h1>
-        <p>Registro rápido de trayectos</p>
+      <div class="brand-left">
+        <img class="brand-icon" src="icons/icon-192.png" alt="R5" />
+        <div>
+          <h1>R5 Registro de Consumo</h1>
+          <p>Consumo real Renault 5</p>
+        </div>
       </div>
     </div>
   </header>
 
-  <section class="hero">
-    <div class="hero-inner">
-      <div class="hero-copy">
-        <h2>Registra al instante</h2>
-        <p>Consumo medio, coste estimado, histórico.</p>
-      </div>
-      <img class="hero-car" src="assets/r5.png" alt="Renault 5" />
-    </div>
-  </section>
-
   <main class="container">
-    <section class="card">
-      <h2>Nuevo trayecto</h2>
-
-      <div class="summary odo">
-        <div class="pill">
-          <span>Odómetro actual</span>
-          <strong id="odoNow">—</strong>
+    <section class="hero-card">
+      <div class="hero-top">
+        <div>
+          <span class="eyebrow">Consumo real Renault 5</span>
+          <h2>Tu uso real, sin simulaciones</h2>
+          <p class="hero-subtitle">Registro rápido, costes reales y ciclos de batería agrupados automáticamente.</p>
         </div>
+        <img class="hero-car" src="assets/r5.png" alt="Renault 5" />
       </div>
 
-      <div class="grid">
-        <label>
-          <span>Fecha</span>
-          <input id="date" type="date" />
-        </label>
-
-        <label>
-          <span>Tipo trayecto</span>
-          <select id="tripType">
-            <option value="Ciudad">Ciudad</option>
-            <option value="Autopista">Autopista</option>
-            <option value="Mixto" selected>Mixto</option>
-          </select>
-        </label>
-
-        <label>
-          <span>Climatización</span>
-          <select id="climate">
-            <option value="No" selected>No</option>
-            <option value="Sí">Sí</option>
-          </select>
-        </label>
-
-        <label>
-          <span>Asientos calefactables</span>
-          <select id="seatsHeat">
-            <option value="No" selected>No</option>
-            <option value="Sí">Sí</option>
-          </select>
-        </label>
-
-        <label>
-          <span>Km inicio</span>
-          <input id="kmStart" type="number" min="0" step="0.1" placeholder="Ej: 12345" />
-        </label>
-
-        <label>
-          <span>Km fin</span>
-          <input id="kmEnd" type="number" min="0" step="0.1" placeholder="Ej: 12378" />
-        </label>
-
-        <label>
-          <span>% batería inicio</span>
-          <input id="socStart" type="number" min="0" max="100" step="1" value="80" />
-        </label>
-
-        <label>
-          <span>% batería final</span>
-          <input id="socEnd" type="number" min="0" max="100" step="1" value="60" />
-        </label>
-
-        <label class="notes">
-          <span>Notas</span>
-          <input id="notes" type="text" placeholder="Opcional" />
-        </label>
+      <div class="hero-odometer">
+        <span>Odómetro actual</span>
+        <strong id="odoNow">—</strong>
       </div>
 
-      <div class="price-row">
-        <label class="checkbox">
-          <input id="externalCharge" type="checkbox" />
-          <span>Carga exterior</span>
-        </label>
-
-        <label class="price">
-          <span>Precio (€/kWh)</span>
-          <input id="price" type="number" min="0" step="0.0001" value="0.1176" />
-        </label>
-      </div>
-
-      <div class="computed">
-        <div class="result">
-          <span>Km trayecto</span>
-          <strong id="kmTrip">—</strong>
-        </div>
-        <div class="result">
-          <span>kWh consumidos</span>
-          <strong id="kwhUsed">—</strong>
-        </div>
-        <div class="result">
+      <div class="hero-metrics">
+        <article class="metric-card featured">
           <span>Consumo medio</span>
-          <strong id="avg">—</strong>
-        </div>
-        <div class="result">
-          <span>Coste estimado</span>
-          <strong id="cost">—</strong>
-        </div>
+          <strong id="globalAvg">—</strong>
+        </article>
+        <article class="metric-card">
+          <span>Autonomía estimada</span>
+          <strong id="realRange">—</strong>
+        </article>
+        <article class="metric-card">
+          <span>Coste / 100 km</span>
+          <strong id="costPer100">—</strong>
+        </article>
+        <article class="metric-card">
+          <span>Total km</span>
+          <strong id="totalKm">—</strong>
+        </article>
       </div>
 
-      <div class="actions">
-        <button id="saveTrip" class="primary">Guardar trayecto</button>
-        <button id="exportCSV">Exportar CSV</button>
-        <button id="importCSV">Importar CSV</button>
-        <!--<button id="clearHistory" class="danger">Limpiar histórico</button>-->
-
-        <label class="checkbox" style="margin-left:auto;">
-          <input id="replaceOnImport" type="checkbox" />
-          <span>Reemplazar al importar</span>
-        </label>
-
-        <input type="file" id="csvFile" accept=".csv,text/csv" hidden />
-      </div>
-
-      <p class="hint" id="msg" aria-live="polite"></p>
-    </section>
-
-    <section class="card">
-      <h2>Histórico</h2>
-
-      <div class="filters">
-        <label>
-          <span>Filtrar por tipo</span>
-          <select id="filterType">
-            <option value="Todos" selected>Todos</option>
-            <option value="Ciudad">Ciudad</option>
-            <option value="Mixto">Mixto</option>
-            <option value="Autopista">Autopista</option>
-          </select>
-        </label>
-
-        <label>
-          <span>Filtrar por extras</span>
-          <select id="filterExtras">
-            <option value="Todos" selected>Todos</option>
-            <option value="Clima">Solo con climatización</option>
-            <option value="Asientos">Solo con asientos calefactables</option>
-            <option value="Ambos">Solo con ambos</option>
-          </select>
-        </label>
-      </div>
-
-      <div class="summary">
-        <div class="pill"><span>Total km</span><strong id="totalKm">—</strong></div>
-        <div class="pill"><span>Total energía</span><strong id="totalKwh">—</strong></div>
-        <div class="pill"><span>Media global</span><strong id="globalAvg">—</strong></div>
-        <div class="pill"><span>Autonomía real</span><strong id="realRange">—</strong></div>
-        <div class="pill"><span>Total coste</span><strong id="totalCost">—</strong></div>
-        <div class="pill"><span>Coste por 100 km</span><strong id="costPer100">—</strong></div>
-      </div>
-
-      <div class="summary summary-3">
-        <div class="pill"><span>Consumo medio ciudad</span><strong id="avgCity">—</strong></div>
-        <div class="pill"><span>Consumo medio mixto</span><strong id="avgMixed">—</strong></div>
-        <div class="pill"><span>Consumo medio autopista</span><strong id="avgHighway">—</strong></div>
-      </div>
-
-      <div class="history-actions">
-        <button id="toggleDetails">📋 Mostrar detalle consumo</button>
-        <button id="toggleChart">📈 Mostrar gráfico</button>
-      </div>
-
-      <div id="chartSection" class="chart-section" style="display:none;">
-        <div class="chart-legend">
-          <div class="legend-item">
-            <span class="legend-dot city"></span> Ciudad
-          </div>
-          <div class="legend-item">
-            <span class="legend-dot mixed"></span> Mixto
-          </div>
-          <div class="legend-item">
-            <span class="legend-dot highway"></span> Autopista
-          </div>
-        </div>
-
-        <canvas id="consumptionChart"></canvas>
-      </div>
-
-      <div class="table-wrap">
-        <table id="historyTable">
-          <thead>
-            <tr>
-              <th>Fecha</th>
-              <th>Tipo</th>
-              <th>Km</th>
-              <th>%</th>
-              <th>kWh</th>
-              <th>kWh/100</th>
-              <th>Clima</th>
-              <th>Asientos</th>
-              <th>€</th>
-              <th>Notas</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
+      <div class="hero-actions">
+        <button id="openTripModal" class="primary cta">+ Añadir trayecto</button>
       </div>
     </section>
+
+    <section class="tabs-card">
+      <div class="tabs" role="tablist" aria-label="Secciones">
+        <button class="tab active" data-tab="summary" role="tab" aria-selected="true">Resumen</button>
+        <button class="tab" data-tab="history" role="tab" aria-selected="false">Histórico</button>
+        <button class="tab" data-tab="chart" role="tab" aria-selected="false">Gráfico</button>
+      </div>
+
+      <section class="tab-panel active" id="tab-summary" role="tabpanel">
+        <div class="summary-grid">
+          <article class="panel-card">
+            <div class="panel-head">
+              <h3>Uso general</h3>
+            </div>
+            <div class="stats-list">
+              <div class="stat-row"><span>Total energía</span><strong id="totalKwh">—</strong></div>
+              <div class="stat-row"><span>Total coste</span><strong id="totalCost">—</strong></div>
+              <div class="stat-row"><span>Trayectos registrados</span><strong id="tripCount">—</strong></div>
+            </div>
+          </article>
+
+          <article class="panel-card">
+            <div class="panel-head">
+              <h3>Eficiencia por tipo</h3>
+            </div>
+            <div class="stats-list">
+              <div class="stat-row"><span>Ciudad</span><strong id="avgCity">—</strong></div>
+              <div class="stat-row"><span>Mixto</span><strong id="avgMixed">—</strong></div>
+              <div class="stat-row"><span>Autopista</span><strong id="avgHighway">—</strong></div>
+            </div>
+          </article>
+
+          <article class="panel-card wide">
+            <div class="panel-head">
+              <h3>Último ciclo de batería</h3>
+            </div>
+            <div id="lastStintSummary" class="last-stint-empty">Aún no hay datos suficientes.</div>
+          </article>
+        </div>
+      </section>
+
+      <section class="tab-panel" id="tab-history" role="tabpanel">
+        <div class="history-toolbar">
+          <button id="toggleFilters" class="ghost">Filtrar</button>
+          <div class="toolbar-actions">
+            <button id="exportCSV" class="ghost">Exportar CSV</button>
+            <button id="importCSV" class="ghost">Importar CSV</button>
+            <input type="file" id="csvFile" accept=".csv,text/csv" hidden />
+          </div>
+        </div>
+
+        <div id="filtersPanel" class="filters-panel hidden">
+          <div class="filters-grid">
+            <label>
+              <span>Tipo de trayecto</span>
+              <select id="filterType">
+                <option value="Todos" selected>Todos</option>
+                <option value="Ciudad">Ciudad</option>
+                <option value="Mixto">Mixto</option>
+                <option value="Autopista">Autopista</option>
+              </select>
+            </label>
+
+            <label>
+              <span>Extras</span>
+              <select id="filterExtras">
+                <option value="Todos" selected>Todos</option>
+                <option value="Clima">Solo con climatización</option>
+                <option value="Asientos">Solo con asientos calefactables</option>
+                <option value="Ambos">Solo con ambos</option>
+              </select>
+            </label>
+          </div>
+
+          <label class="checkbox inline-checkbox">
+            <input id="replaceOnImport" type="checkbox" />
+            <span>Reemplazar todo al importar</span>
+          </label>
+        </div>
+
+        <div id="historyList" class="history-list"></div>
+      </section>
+
+      <section class="tab-panel" id="tab-chart" role="tabpanel">
+        <div class="chart-card">
+          <div class="chart-head">
+            <div>
+              <h3>Consumo por trayecto</h3>
+              <p>Colores según tipo de uso.</p>
+            </div>
+            <div class="chart-legend">
+              <div class="legend-item"><span class="legend-dot city"></span>Ciudad</div>
+              <div class="legend-item"><span class="legend-dot mixed"></span>Mixto</div>
+              <div class="legend-item"><span class="legend-dot highway"></span>Autopista</div>
+            </div>
+          </div>
+          <canvas id="consumptionChart"></canvas>
+        </div>
+      </section>
+    </section>
+
+    <p class="hint" id="msg" aria-live="polite"></p>
   </main>
 
+  <div id="tripModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-backdrop" id="closeTripModalBackdrop"></div>
+    <section class="modal-sheet" role="dialog" aria-modal="true" aria-labelledby="tripModalTitle">
+      <div class="modal-header">
+        <div>
+          <span class="eyebrow">Nuevo trayecto</span>
+          <h2 id="tripModalTitle">Añadir trayecto</h2>
+        </div>
+        <button id="closeTripModal" class="icon-btn" aria-label="Cerrar">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="quick-grid">
+          <label>
+            <span>Fecha</span>
+            <input id="date" type="date" />
+          </label>
+
+          <label>
+            <span>Tipo de trayecto</span>
+            <select id="tripType">
+              <option value="Ciudad">Ciudad</option>
+              <option value="Mixto" selected>Mixto</option>
+              <option value="Autopista">Autopista</option>
+            </select>
+          </label>
+
+          <label>
+            <span>Km inicio</span>
+            <input id="kmStart" type="number" min="0" step="0.1" placeholder="Ej: 12345" />
+          </label>
+
+          <label>
+            <span>Km fin</span>
+            <input id="kmEnd" type="number" min="0" step="0.1" placeholder="Ej: 12378" />
+          </label>
+
+          <label>
+            <span>% batería inicio</span>
+            <input id="socStart" type="number" min="0" max="100" step="1" value="80" />
+          </label>
+
+          <label>
+            <span>% batería final</span>
+            <input id="socEnd" type="number" min="0" max="100" step="1" value="60" />
+          </label>
+        </div>
+
+        <button id="toggleAdvanced" class="toggle-advanced" aria-expanded="false">Mostrar opciones avanzadas</button>
+
+        <div id="advancedFields" class="advanced-fields hidden">
+          <div class="advanced-grid">
+            <label>
+              <span>Climatización</span>
+              <select id="climate">
+                <option value="No" selected>No</option>
+                <option value="Sí">Sí</option>
+              </select>
+            </label>
+
+            <label>
+              <span>Asientos calefactables</span>
+              <select id="seatsHeat">
+                <option value="No" selected>No</option>
+                <option value="Sí">Sí</option>
+              </select>
+            </label>
+
+            <label class="checkbox inline-checkbox">
+              <input id="externalCharge" type="checkbox" />
+              <span>Carga exterior</span>
+            </label>
+
+            <label>
+              <span>Precio (€/kWh)</span>
+              <input id="price" type="number" min="0" step="0.0001" value="0.1176" />
+            </label>
+
+            <label class="notes-field wide">
+              <span>Notas</span>
+              <input id="notes" type="text" placeholder="Opcional" />
+            </label>
+          </div>
+        </div>
+
+        <div class="computed-grid">
+          <article class="computed-card">
+            <span>Km trayecto</span>
+            <strong id="kmTrip">—</strong>
+          </article>
+          <article class="computed-card">
+            <span>kWh consumidos</span>
+            <strong id="kwhUsed">—</strong>
+          </article>
+          <article class="computed-card featured">
+            <span>Consumo medio</span>
+            <strong id="avg">—</strong>
+          </article>
+          <article class="computed-card">
+            <span>Coste estimado</span>
+            <strong id="cost">—</strong>
+          </article>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button id="saveTrip" class="primary">Guardar trayecto</button>
+      </div>
+    </section>
+  </div>
+
   <footer class="footer">
-    <small>v2.0.1 · Davo</small>
+    <small>v3.0 · Davo</small>
   </footer>
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script type="module" src="app.js"></script>
 </body>
 </html>
-
-
-
-
