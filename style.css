@@ -120,23 +120,23 @@ img{display:block;max-width:100%}
 }
 .hero-odometer span{color:var(--muted);font-size:16px}
 .hero-odometer strong{font-size:40px;line-height:1;font-weight:800}
-.hero-metrics{
-  display:grid;
-  grid-template-columns:repeat(4,1fr);
-  gap:14px;
-  margin-top:22px;
+.hero-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
 }
+
 .metric-card{
-  background:rgba(255,255,255,.03);
-  border-radius:22px;
-  padding:18px;
-  min-height:104px;
-  display:flex;
-  flex-direction:column;
-  justify-content:space-between;
+  
+  padding: 14px 12px;
+  border-radius: 18px;
+  min-height: 104px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
 }
-.metric-card span{color:var(--muted);font-size:16px;text-align: center;}
-.metric-card strong{font-size:28px;line-height:1.1;text-align: center;}
+.metric-card span{color:var(--muted);font-size: 0.88rem;line-height: 1.2; opacity: 0.85;}
+.metric-card strong{font-size: clamp(1.5rem, 5vw, 2rem);line-height: 1.05;white-space: nowrap;text-align: center;}
 .metric-card.featured{
   background:linear-gradient(180deg, rgba(255,212,0,.18), rgba(255,212,0,.08));
 }
@@ -594,7 +594,24 @@ input:focus,select:focus{border-color:rgba(255,212,0,.45)}
   .stint-kpis{grid-template-columns:1fr}
   .trip-row{grid-template-columns:1fr 1fr}
 }
+@media (max-width: 768px) {
+  .hero-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+  metric-card {
+    min-height: 90px;
+    padding: 12px;
+  }
 
+  .metric-card span {
+    font-size: 0.82rem;
+  }
+
+  .metric-card strong {
+    font-size: 1.9rem;
+  }
+}
 @media (max-width: 640px){
   .container{padding:14px 12px 24px}
   .hero-card,.tabs-card,.modal-sheet{padding:16px}
