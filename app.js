@@ -1,163 +1,623 @@
 document.addEventListener("DOMContentLoaded", () => {
   let trips = [];
+  let chartInstance = null;
 
-  const modal = document.getElementById("modal");
-  const openModalBtn = document.getElementById("openModal");
-  const closeModalBtn = document.getElementById("closeModal");
+  const BATTERY_KWH = 52;
+
+  // HERO
+  const odoNowEl = document.getElementById("odoNow");
+  const globalAvgEl = document.getElementById("globalAvg");
+  const realRangeEl = document.getElementById("realRange");
+  const costPer100El = document.getElementById("costPer100");
+  const totalKmEl = document.getElementById("totalKm");
+
+  // SUMMARY
+  const totalKwhEl = document.getElementById("totalKwh");
+  const totalCostEl = document.getElementById("totalCost");
+  const tripCountEl = document.getElementById("tripCount");
+  const avgCityEl = document.getElementById("avgCity");
+  const avgMixedEl = document.getElementById("avgMixed");
+  const avgHighwayEl = document.getElementById("avgHighway");
+  const lastStintSummaryEl = document.getElementById("lastStintSummary");
+
+  // MODAL
+  const tripModal = document.getElementById("tripModal");
+  const openTripModalBtn = document.getElementById("openTripModal");
+  const closeTripModalBtn = document.getElementById("closeTripModal");
+  const closeTripModalBackdrop = document.getElementById("closeTripModalBackdrop");
   const toggleAdvancedBtn = document.getElementById("toggleAdvanced");
-  const advanced = document.getElementById("advanced");
-  const saveBtn = document.getElementById("save");
-  const history = document.getElementById("history");
+  const advancedFields = document.getElementById("advancedFields");
+  const saveTripBtn = document.getElementById("saveTrip");
 
+  // FORM
+  const dateEl = document.getElementById("date");
+  const tripTypeEl = document.getElementById("tripType");
+  const kmStartEl = document.getElementById("kmStart");
+  const kmEndEl = document.getElementById("kmEnd");
+  const socStartEl = document.getElementById("socStart");
+  const socEndEl = document.getElementById("socEnd");
+  const climateEl = document.getElementById("climate");
+  const seatsHeatEl = document.getElementById("seatsHeat");
+  const externalChargeEl = document.getElementById("externalCharge");
+  const priceEl = document.getElementById("price");
+  const notesEl = document.getElementById("notes");
+
+  // COMPUTED
+  const kmTripEl = document.getElementById("kmTrip");
+  const kwhUsedEl = document.getElementById("kwhUsed");
   const avgEl = document.getElementById("avg");
-  const rangeEl = document.getElementById("range");
-  const cost100El = document.getElementById("cost100");
-  const odometerEl = document.getElementById("odometer");
+  const costEl = document.getElementById("cost");
 
-  if (!modal || !openModalBtn || !closeModalBtn || !toggleAdvancedBtn || !advanced || !saveBtn || !history) {
-    console.error("Faltan elementos del DOM. Revisa que los IDs del HTML coincidan con el JS.");
+  // HISTORY / FILTERS
+  const historyListEl = document.getElementById("historyList");
+  const toggleFiltersBtn = document.getElementById("toggleFilters");
+  const filtersPanel = document.getElementById("filtersPanel");
+  const filterTypeEl = document.getElementById("filterType");
+  const filterExtrasEl = document.getElementById("filterExtras");
+
+  // IMPORT / EXPORT
+  const exportCSVBtn = document.getElementById("exportCSV");
+  const importCSVBtn = document.getElementById("importCSV");
+  const csvFileEl = document.getElementById("csvFile");
+  const replaceOnImportEl = document.getElementById("replaceOnImport");
+
+  // MSG
+  const msgEl = document.getElementById("msg");
+
+  // CHART
+  const chartCanvas = document.getElementById("consumptionChart");
+
+  // TABS
+  const tabs = document.querySelectorAll(".tab");
+  const panels = document.querySelectorAll(".tab-panel");
+
+  const required = [
+    tripModal, openTripModalBtn, closeTripModalBtn, closeTripModalBackdrop,
+    toggleAdvancedBtn, advancedFields, saveTripBtn,
+    historyListEl, chartCanvas
+  ];
+
+  if (required.some(el => !el)) {
+    console.error("Faltan elementos del DOM. Revisa IDs del HTML.");
     return;
   }
 
-  openModalBtn.addEventListener("click", () => {
-    modal.classList.remove("hidden");
+  // ---------- UTIL ----------
+  function showMsg(text) {
+    if (!msgEl) return;
+    msgEl.textContent = text;
+    setTimeout(() => {
+      if (msgEl.textContent === text) msgEl.textContent = "";
+    }, 2500);
+  }
+
+  function formatNumber(value, digits = 1) {
+    return Number(value).toFixed(digits).replace(".", ",");
+  }
+
+  function formatKm(value) {
+    return `${formatNumber(value, 1)} km`;
+  }
+
+  function formatKwh(value) {
+    return `${formatNumber(value, 2)} kWh`;
+  }
+
+  function formatAvg(value) {
+    return `${formatNumber(value, 1)} kWh/100 km`;
+  }
+
+  function formatEuro(value) {
+    return `${formatNumber(value, 2)} €`;
+  }
+
+  function safeAvg(totalKwh, totalKm) {
+    return totalKm > 0 ? (totalKwh / totalKm) * 100 : 0;
+  }
+
+  function getComputedFromForm() {
+    const kmStart = Number(kmStartEl.value || 0);
+    const kmEnd = Number(kmEndEl.value || 0);
+    const socStart = Number(socStartEl.value || 0);
+    const socEnd = Number(socEndEl.value || 0);
+    const price = Number(priceEl.value || 0);
+
+    const kmTrip = kmEnd - kmStart;
+    const socUsed = socStart - socEnd;
+    const kwhUsed = (socUsed / 100) * BATTERY_KWH;
+    const avg = kmTrip > 0 ? (kwhUsed / kmTrip) * 100 : 0;
+    const cost = kwhUsed * price;
+
+    return { kmStart, kmEnd, socStart, socEnd, socUsed, kmTrip, kwhUsed, avg, price, cost };
+  }
+
+  function updateComputedCards() {
+    const { kmTrip, kwhUsed, avg, cost } = getComputedFromForm();
+
+    kmTripEl.textContent = kmTrip > 0 ? formatKm(kmTrip) : "—";
+    kwhUsedEl.textContent = kwhUsed > 0 ? formatKwh(kwhUsed) : "—";
+    avgEl.textContent = avg > 0 ? formatAvg(avg) : "—";
+    costEl.textContent = cost >= 0 ? formatEuro(cost) : "—";
+  }
+
+  function clearForm() {
+    const today = new Date().toISOString().slice(0, 10);
+    dateEl.value = today;
+    tripTypeEl.value = "Mixto";
+    climateEl.value = "No";
+    seatsHeatEl.value = "No";
+    externalChargeEl.checked = false;
+    priceEl.value = "0.1176";
+    notesEl.value = "";
+    advancedFields.classList.add("hidden");
+    toggleAdvancedBtn.setAttribute("aria-expanded", "false");
+    toggleAdvancedBtn.textContent = "Mostrar opciones avanzadas";
+
+    if (trips.length > 0) {
+      const last = trips[trips.length - 1];
+      kmStartEl.value = last.kmEnd;
+      socStartEl.value = last.socEnd;
+    } else {
+      kmStartEl.value = "";
+      socStartEl.value = 80;
+    }
+
+    kmEndEl.value = "";
+    socEndEl.value = 60;
+
+    updateComputedCards();
+  }
+
+  function openModal() {
+    tripModal.classList.remove("hidden");
+    tripModal.setAttribute("aria-hidden", "false");
+  }
+
+  function closeModal() {
+    tripModal.classList.add("hidden");
+    tripModal.setAttribute("aria-hidden", "true");
+  }
+
+  // ---------- STINTS ----------
+  function buildStints(filteredTrips = trips) {
+    if (!filteredTrips.length) return [];
+
+    const sorted = [...filteredTrips].sort((a, b) => {
+      if (a.date === b.date) return a.created_at - b.created_at;
+      return a.date.localeCompare(b.date);
+    });
+
+    const stints = [];
+    let current = [];
+
+    for (let i = 0; i < sorted.length; i++) {
+      const trip = sorted[i];
+
+      if (i > 0) {
+        const prev = sorted[i - 1];
+        if (trip.socStart > prev.socEnd) {
+          if (current.length) stints.push([...current]);
+          current = [];
+        }
+      }
+
+      current.push(trip);
+    }
+
+    if (current.length) {
+      stints.push([...current]);
+    }
+
+    return stints;
+  }
+
+  function summarizeStint(stint) {
+    const totalKm = stint.reduce((sum, t) => sum + t.kmTrip, 0);
+    const totalKwh = stint.reduce((sum, t) => sum + t.kwhUsed, 0);
+    const totalCost = stint.reduce((sum, t) => sum + t.cost, 0);
+
+    const socStart = stint[0].socStart;
+    const socEnd = stint[stint.length - 1].socEnd;
+    const socUsed = socStart - socEnd;
+    const avg = safeAvg(totalKwh, totalKm);
+
+    return {
+      count: stint.length,
+      totalKm,
+      totalKwh,
+      totalCost,
+      socStart,
+      socEnd,
+      socUsed,
+      avg,
+      trips: stint
+    };
+  }
+
+  // ---------- RENDER ----------
+  function renderHero() {
+    const totalKm = trips.reduce((sum, t) => sum + t.kmTrip, 0);
+    const totalKwh = trips.reduce((sum, t) => sum + t.kwhUsed, 0);
+    const totalCost = trips.reduce((sum, t) => sum + t.cost, 0);
+    const avg = safeAvg(totalKwh, totalKm);
+    const range = avg > 0 ? (BATTERY_KWH / avg) * 100 : 0;
+    const lastOdo = trips.length ? trips[trips.length - 1].kmEnd : 0;
+    const costPer100 = totalKm > 0 ? (totalCost / totalKm) * 100 : 0;
+
+    odoNowEl.textContent = trips.length ? `${formatNumber(lastOdo, 1)} km` : "—";
+    globalAvgEl.textContent = trips.length ? formatAvg(avg) : "—";
+    realRangeEl.textContent = trips.length ? `${Math.round(range)} km` : "—";
+    costPer100El.textContent = trips.length ? formatEuro(costPer100) : "—";
+    totalKmEl.textContent = trips.length ? formatKm(totalKm) : "—";
+  }
+
+  function renderSummary() {
+    const totalKm = trips.reduce((sum, t) => sum + t.kmTrip, 0);
+    const totalKwh = trips.reduce((sum, t) => sum + t.kwhUsed, 0);
+    const totalCost = trips.reduce((sum, t) => sum + t.cost, 0);
+
+    totalKwhEl.textContent = trips.length ? formatKwh(totalKwh) : "—";
+    totalCostEl.textContent = trips.length ? formatEuro(totalCost) : "—";
+    tripCountEl.textContent = String(trips.length);
+
+    const byType = {
+      Ciudad: trips.filter(t => t.tripType === "Ciudad"),
+      Mixto: trips.filter(t => t.tripType === "Mixto"),
+      Autopista: trips.filter(t => t.tripType === "Autopista")
+    };
+
+    function typeAvg(arr) {
+      const km = arr.reduce((sum, t) => sum + t.kmTrip, 0);
+      const kwh = arr.reduce((sum, t) => sum + t.kwhUsed, 0);
+      return km > 0 ? formatAvg(safeAvg(kwh, km)) : "—";
+    }
+
+    avgCityEl.textContent = typeAvg(byType.Ciudad);
+    avgMixedEl.textContent = typeAvg(byType.Mixto);
+    avgHighwayEl.textContent = typeAvg(byType.Autopista);
+
+    const stints = buildStints(trips);
+    if (!stints.length) {
+      lastStintSummaryEl.innerHTML = "Aún no hay datos suficientes.";
+      return;
+    }
+
+    const last = summarizeStint(stints[stints.length - 1]);
+    lastStintSummaryEl.innerHTML = `
+      <div class="stats-list">
+        <div class="stat-row"><span>Rango batería</span><strong>${last.socStart}% → ${last.socEnd}%</strong></div>
+        <div class="stat-row"><span>Trayectos</span><strong>${last.count}</strong></div>
+        <div class="stat-row"><span>Km totales</span><strong>${formatKm(last.totalKm)}</strong></div>
+        <div class="stat-row"><span>Energía</span><strong>${formatKwh(last.totalKwh)}</strong></div>
+        <div class="stat-row"><span>Consumo medio</span><strong>${formatAvg(last.avg)}</strong></div>
+        <div class="stat-row"><span>Coste total</span><strong>${formatEuro(last.totalCost)}</strong></div>
+      </div>
+    `;
+  }
+
+  function passesFilters(trip) {
+    const typeFilter = filterTypeEl.value;
+    const extrasFilter = filterExtrasEl.value;
+
+    let typeOk = typeFilter === "Todos" || trip.tripType === typeFilter;
+    let extrasOk = true;
+
+    if (extrasFilter === "Clima") extrasOk = trip.climate === "Sí";
+    if (extrasFilter === "Asientos") extrasOk = trip.seatsHeat === "Sí";
+    if (extrasFilter === "Ambos") extrasOk = trip.climate === "Sí" && trip.seatsHeat === "Sí";
+
+    return typeOk && extrasOk;
+  }
+
+  function renderHistory() {
+    historyListEl.innerHTML = "";
+
+    const filtered = trips.filter(passesFilters);
+    const stints = buildStints(filtered);
+
+    if (!stints.length) {
+      historyListEl.innerHTML = `<div class="panel-card">No hay trayectos para mostrar.</div>`;
+      return;
+    }
+
+    stints.reverse().forEach((stint, idx) => {
+      const summary = summarizeStint(stint);
+      const card = document.createElement("article");
+      card.className = "stint-card panel-card";
+
+      const detailsId = `stint-details-${idx}`;
+
+      const detailRows = summary.trips.map(trip => `
+        <div class="trip-detail-row">
+          <div>
+            <strong>${trip.date}</strong>
+            <span>${trip.tripType}</span>
+          </div>
+          <div>${formatKm(trip.kmTrip)}</div>
+          <div>${formatAvg(trip.avg)}</div>
+          <div>${formatEuro(trip.cost)}</div>
+        </div>
+        <div class="trip-detail-meta">
+          SOC ${trip.socStart}% → ${trip.socEnd}% · ${trip.climate} clima · ${trip.seatsHeat} asientos${trip.notes ? ` · ${trip.notes}` : ""}
+        </div>
+      `).join("");
+
+      card.innerHTML = `
+        <div class="stint-summary">
+          <div class="stint-main">
+            <div class="stint-title">🔋 ${summary.socStart}% → ${summary.socEnd}%</div>
+            <div class="stint-sub">
+              ${formatKm(summary.totalKm)} · ${formatAvg(summary.avg)} · ${formatEuro(summary.totalCost)}
+            </div>
+            <div class="stint-meta">${summary.count} trayectos</div>
+          </div>
+          <button class="ghost toggle-details" data-target="${detailsId}">Ver detalle</button>
+        </div>
+        <div id="${detailsId}" class="stint-details hidden">
+          ${detailRows}
+        </div>
+      `;
+
+      historyListEl.appendChild(card);
+    });
+
+    historyListEl.querySelectorAll(".toggle-details").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const target = document.getElementById(btn.dataset.target);
+        if (!target) return;
+
+        const isHidden = target.classList.contains("hidden");
+        target.classList.toggle("hidden");
+        btn.textContent = isHidden ? "Ocultar detalle" : "Ver detalle";
+      });
+    });
+  }
+
+  function renderChart() {
+    if (!chartCanvas) return;
+
+    const labels = trips.map((t, i) => `${i + 1}`);
+    const data = trips.map(t => Number(t.avg.toFixed(1)));
+
+    const pointColors = trips.map(t => {
+      if (t.tripType === "Ciudad") return "#34d399";
+      if (t.tripType === "Mixto") return "#60a5fa";
+      return "#f59e0b";
+    });
+
+    if (chartInstance) {
+      chartInstance.destroy();
+    }
+
+    chartInstance = new Chart(chartCanvas, {
+      type: "line",
+      data: {
+        labels,
+        datasets: [{
+          label: "kWh/100 km",
+          data,
+          borderColor: "#ffd400",
+          backgroundColor: "rgba(255,212,0,0.15)",
+          tension: 0.25,
+          fill: true,
+          pointRadius: 5,
+          pointBackgroundColor: pointColors
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          y: {
+            beginAtZero: false
+          }
+        }
+      }
+    });
+  }
+
+  function renderAll() {
+    renderHero();
+    renderSummary();
+    renderHistory();
+    renderChart();
+  }
+
+  // ---------- EVENTS ----------
+  openTripModalBtn.addEventListener("click", () => {
+    clearForm();
+    openModal();
   });
 
-  closeModalBtn.addEventListener("click", () => {
-    modal.classList.add("hidden");
-  });
+  closeTripModalBtn.addEventListener("click", closeModal);
+  closeTripModalBackdrop.addEventListener("click", closeModal);
 
   toggleAdvancedBtn.addEventListener("click", () => {
-    advanced.classList.toggle("hidden");
+    const expanded = toggleAdvancedBtn.getAttribute("aria-expanded") === "true";
+    advancedFields.classList.toggle("hidden");
+    toggleAdvancedBtn.setAttribute("aria-expanded", String(!expanded));
+    toggleAdvancedBtn.textContent = expanded
+      ? "Mostrar opciones avanzadas"
+      : "Ocultar opciones avanzadas";
   });
 
-  saveBtn.addEventListener("click", () => {
-    const kmStart = Number(document.getElementById("kmStart")?.value || 0);
-    const kmEnd = Number(document.getElementById("kmEnd")?.value || 0);
-    const socStart = Number(document.getElementById("socStart")?.value || 0);
-    const socEnd = Number(document.getElementById("socEnd")?.value || 0);
-    const tripType = document.getElementById("tripType")?.value || "Mixto";
-    const price = Number(document.getElementById("price")?.value || 0);
-    const climate = document.getElementById("climate")?.checked || false;
-    const seats = document.getElementById("seats")?.checked || false;
-    const notes = document.getElementById("notes")?.value || "";
+  [kmStartEl, kmEndEl, socStartEl, socEndEl, priceEl].forEach(el => {
+    el.addEventListener("input", updateComputedCards);
+  });
 
+  externalChargeEl.addEventListener("change", () => {
+    if (externalChargeEl.checked) {
+      priceEl.value = "0.45";
+    } else {
+      priceEl.value = "0.1176";
+    }
+    updateComputedCards();
+  });
+
+  saveTripBtn.addEventListener("click", () => {
+    const { kmStart, kmEnd, socStart, socEnd, socUsed, kmTrip, kwhUsed, avg, price, cost } = getComputedFromForm();
+
+    if (!dateEl.value) {
+      alert("Introduce una fecha.");
+      return;
+    }
     if (kmEnd <= kmStart) {
       alert("El km fin debe ser mayor que el km inicio.");
       return;
     }
-
     if (socStart <= socEnd) {
       alert("La batería inicial debe ser mayor que la final.");
       return;
     }
 
-    const km = kmEnd - kmStart;
-    const kwh = ((socStart - socEnd) / 100) * 52;
-    const avg = (kwh / km) * 100;
-    const cost = kwh * price;
-
-    trips.push({
-      km,
-      kwh,
-      avg,
+    const trip = {
+      date: dateEl.value,
+      tripType: tripTypeEl.value,
+      kmStart,
+      kmEnd,
+      kmTrip,
       socStart,
       socEnd,
-      tripType,
+      socUsed,
+      kwhUsed,
+      avg,
       price,
       cost,
-      climate,
-      seats,
-      notes
-    });
+      climate: climateEl.value,
+      seatsHeat: seatsHeatEl.value,
+      notes: notesEl.value.trim(),
+      created_at: Date.now()
+    };
 
-    modal.classList.add("hidden");
-    clearForm();
-    render();
+    trips.push(trip);
+    closeModal();
+    renderAll();
+    showMsg("Trayecto guardado.");
   });
 
-  function clearForm() {
-    const ids = ["kmStart", "kmEnd", "socStart", "socEnd", "price", "notes"];
-    ids.forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.value = "";
-    });
+  toggleFiltersBtn.addEventListener("click", () => {
+    filtersPanel.classList.toggle("hidden");
+  });
 
-    const climateEl = document.getElementById("climate");
-    const seatsEl = document.getElementById("seats");
-    const tripTypeEl = document.getElementById("tripType");
+  [filterTypeEl, filterExtrasEl].forEach(el => {
+    el.addEventListener("change", renderHistory);
+  });
 
-    if (climateEl) climateEl.checked = false;
-    if (seatsEl) seatsEl.checked = false;
-    if (tripTypeEl) tripTypeEl.value = "Ciudad";
-  }
-
-  function render() {
-    history.innerHTML = "";
-
-    trips.forEach((t) => {
-      const div = document.createElement("div");
-      div.className = "card-trip";
-
-      div.innerHTML = `
-        <div class="trip-main">🔋 ${t.socStart}% → ${t.socEnd}%</div>
-        <div class="trip-sub">${t.km.toFixed(1)} km · ${t.avg.toFixed(1)} kWh/100 · ${t.tripType}</div>
-        <div class="trip-details">
-          <div>Energía: ${t.kwh.toFixed(2)} kWh</div>
-          <div>Coste: ${t.cost.toFixed(2)} €</div>
-          <div>Precio: ${t.price.toFixed(2)} €/kWh</div>
-          <div>Clima: ${t.climate ? "Sí" : "No"}</div>
-          <div>Asientos: ${t.seats ? "Sí" : "No"}</div>
-          <div>Notas: ${t.notes || "-"}</div>
-        </div>
-      `;
-
-      div.addEventListener("click", () => {
-        const details = div.querySelector(".trip-details");
-        if (!details) return;
-        details.style.display = details.style.display === "block" ? "none" : "block";
-      });
-
-      history.appendChild(div);
-    });
-
-    updateStats();
-  }
-
-  function updateStats() {
-    if (trips.length === 0) {
-      if (avgEl) avgEl.textContent = "0";
-      if (rangeEl) rangeEl.textContent = "0";
-      if (cost100El) cost100El.textContent = "0";
-      if (odometerEl) odometerEl.textContent = "0 km";
+  exportCSVBtn.addEventListener("click", () => {
+    if (!trips.length) {
+      alert("No hay trayectos para exportar.");
       return;
     }
 
-    const totalKm = trips.reduce((sum, t) => sum + t.km, 0);
-    const totalKwh = trips.reduce((sum, t) => sum + t.kwh, 0);
-    const totalCost = trips.reduce((sum, t) => sum + t.cost, 0);
+    const headers = [
+      "date","tripType","kmStart","kmEnd","kmTrip","socStart","socEnd","socUsed",
+      "kwhUsed","avg","price","cost","climate","seatsHeat","notes","created_at"
+    ];
 
-    const avg = (totalKwh / totalKm) * 100;
-    const range = avg > 0 ? (52 / avg) * 100 : 0;
-    const cost100 = totalKm > 0 ? (totalCost / totalKm) * 100 : 0;
+    const rows = trips.map(t =>
+      headers.map(h => `"${String(t[h] ?? "").replaceAll('"', '""')}"`).join(",")
+    );
 
-    if (avgEl) avgEl.textContent = avg.toFixed(1);
-    if (rangeEl) rangeEl.textContent = Math.round(range);
-    if (cost100El) cost100El.textContent = cost100.toFixed(2);
-    if (odometerEl) odometerEl.textContent = `${totalKm.toFixed(0)} km`;
-  }
+    const csv = [headers.join(","), ...rows].join("\\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
 
-  document.querySelectorAll(".tab").forEach(btn => {
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "trips.csv";
+    a.click();
+
+    URL.revokeObjectURL(url);
+  });
+
+  importCSVBtn.addEventListener("click", () => {
+    csvFileEl.click();
+  });
+
+  csvFileEl.addEventListener("change", async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const text = await file.text();
+    const lines = text.split(/\\r?\\n/).filter(Boolean);
+    if (lines.length < 2) {
+      alert("CSV vacío o inválido.");
+      return;
+    }
+
+    const headers = lines[0].split(",").map(h => h.replace(/^"|"$/g, ""));
+    const imported = [];
+
+    for (let i = 1; i < lines.length; i++) {
+      const values = lines[i].match(/(".*?"|[^",]+)(?=\\s*,|\\s*$)/g) || [];
+      const row = {};
+
+      headers.forEach((header, idx) => {
+        row[header] = (values[idx] || "").replace(/^"|"$/g, "").replace(/""/g, '"');
+      });
+
+      imported.push({
+        date: row.date,
+        tripType: row.tripType,
+        kmStart: Number(row.kmStart),
+        kmEnd: Number(row.kmEnd),
+        kmTrip: Number(row.kmTrip),
+        socStart: Number(row.socStart),
+        socEnd: Number(row.socEnd),
+        socUsed: Number(row.socUsed),
+        kwhUsed: Number(row.kwhUsed),
+        avg: Number(row.avg),
+        price: Number(row.price),
+        cost: Number(row.cost),
+        climate: row.climate || "No",
+        seatsHeat: row.seatsHeat || "No",
+        notes: row.notes || "",
+        created_at: Number(row.created_at || Date.now() + i)
+      });
+    }
+
+    if (replaceOnImportEl.checked) {
+      trips = imported;
+    } else {
+      const existingKeys = new Set(
+        trips.map(t => `${t.date}|${t.kmStart}|${t.kmEnd}|${t.socStart}|${t.socEnd}`)
+      );
+
+      imported.forEach(t => {
+        const key = `${t.date}|${t.kmStart}|${t.kmEnd}|${t.socStart}|${t.socEnd}`;
+        if (!existingKeys.has(key)) {
+          trips.push(t);
+          existingKeys.add(key);
+        }
+      });
+    }
+
+    renderAll();
+    showMsg("Importación completada.");
+    csvFileEl.value = "";
+  });
+
+  tabs.forEach(btn => {
     btn.addEventListener("click", () => {
-      document.querySelectorAll(".tab").forEach(b => b.classList.remove("active"));
+      tabs.forEach(t => {
+        t.classList.remove("active");
+        t.setAttribute("aria-selected", "false");
+      });
+
+      panels.forEach(p => p.classList.remove("active"));
+
       btn.classList.add("active");
+      btn.setAttribute("aria-selected", "true");
 
-      document.querySelectorAll(".tab-content").forEach(c => c.classList.remove("active"));
+      const panel = document.getElementById(`tab-${btn.dataset.tab}`);
+      if (panel) panel.classList.add("active");
 
-      const target = document.getElementById(btn.dataset.tab);
-      if (target) target.classList.add("active");
+      if (btn.dataset.tab === "chart") {
+        setTimeout(renderChart, 50);
+      }
     });
   });
 
-  updateStats();
+  clearForm();
+  renderAll();
 });
