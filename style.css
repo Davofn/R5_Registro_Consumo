@@ -898,13 +898,16 @@ select:focus{
     font-size:36px;
   }
 
-  .hero-metrics,
   .filters-grid,
   .quick-grid,
   .advanced-grid,
   .computed-grid,
   .last-stint-box{
     grid-template-columns:1fr;
+  }
+
+  .hero-metrics{
+    grid-template-columns:repeat(2,1fr);
   }
 
   .history-toolbar,
