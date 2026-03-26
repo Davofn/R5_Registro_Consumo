@@ -400,7 +400,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     totalKwhEl.textContent = trips.length ? formatKwh(totalKwh) : "—";
     totalCostEl.textContent = trips.length ? formatEuro(totalCost) : "—";
-    tripCountEl.textContent = String(trips.length);
+    //tripCountEl.textContent = String(trips.length);
 
     const byType = {
       Ciudad: trips.filter(t => t.tripType === "Ciudad"),
