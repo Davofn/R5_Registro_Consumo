@@ -115,7 +115,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function formatAvg(value) {
-    return `${formatNumber(value, 1)} kWh/100 km`;
+    return `${formatNumber(value, 1)} kWh`;
   }
 
   function formatEuro(value) {
