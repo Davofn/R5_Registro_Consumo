@@ -1,8 +1,16 @@
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
+
+const SUPABASE_URL = "https://fzsioxqmpjmunaszrjdl.supabase.co";
+const SUPABASE_KEY = "sb_publishable_lPgxna3-91FskASGGI854g_RZndEz2S";
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+
 document.addEventListener("DOMContentLoaded", () => {
   let trips = [];
   let chartInstance = null;
 
   const BATTERY_KWH = 52;
+  const DEFAULT_HOME_PRICE = 0.1176;
+  const DEFAULT_EXTERNAL_PRICE = 0.45;
 
   // HERO
   const odoNowEl = document.getElementById("odoNow");
@@ -82,7 +90,10 @@ document.addEventListener("DOMContentLoaded", () => {
     return;
   }
 
-  // ---------- UTIL ----------
+  function $(id) {
+    return document.getElementById(id);
+  }
+
   function showMsg(text) {
     if (!msgEl) return;
     msgEl.textContent = text;
@@ -115,18 +126,151 @@ document.addEventListener("DOMContentLoaded", () => {
     return totalKm > 0 ? (totalKwh / totalKm) * 100 : 0;
   }
 
-  function getComputedFromForm() {
-    const kmStart = Number(kmStartEl.value || 0);
-    const kmEnd = Number(kmEndEl.value || 0);
-    const socStart = Number(socStartEl.value || 0);
-    const socEnd = Number(socEndEl.value || 0);
-    const price = Number(priceEl.value || 0);
+  function clamp(n, min, max) {
+    if (Number.isNaN(n)) return min;
+    return Math.max(min, Math.min(max, n));
+  }
 
-    const kmTrip = kmEnd - kmStart;
+  function toDbDate(isoDate) {
+    if (!isoDate) return "";
+    const [y, m, d] = isoDate.split("-");
+    return `${d}/${m}/${y}`;
+  }
+
+  function dbDateToInput(dbDate) {
+    if (!dbDate) return "";
+    if (dbDate.includes("-")) return dbDate;
+    const [d, m, y] = dbDate.split("/");
+    return `${y}-${m}-${d}`;
+  }
+
+  function sortDateValue(dateStr) {
+    if (!dateStr) return 0;
+    if (dateStr.includes("-")) return new Date(dateStr).getTime();
+    const [d, m, y] = dateStr.split("/").map(Number);
+    return new Date(y, m - 1, d).getTime();
+  }
+
+  function normalizeTripFromRow(row) {
+    return {
+      kind: "trip",
+      id: row.id,
+      date: row.trip_date,
+      tripType: row.trip_type,
+      climate: row.climate || "No",
+      seatsHeat: row.seats_heat || "No",
+      kmStart: Number(row.km_start),
+      kmEnd: Number(row.km_end),
+      kmTrip: Number(row.km_trip),
+      socStart: Number(row.soc_start),
+      socEnd: Number(row.soc_end),
+      socUsed: Number(row.soc_used),
+      kwhUsed: Number(row.kwh_used),
+      avg: Number(row.avg),
+      external: !!row.external,
+      price: Number(row.price ?? DEFAULT_HOME_PRICE),
+      cost: Number(row.cost ?? 0),
+      notes: row.notes || "",
+      created_at: row.created_at ? new Date(row.created_at).getTime() : Date.now()
+    };
+  }
+
+  function tripToRow(entry) {
+    return {
+      trip_date: entry.date,
+      trip_type: entry.tripType,
+      climate: entry.climate || "No",
+      seats_heat: entry.seatsHeat || "No",
+      km_start: entry.kmStart,
+      km_end: entry.kmEnd,
+      km_trip: entry.kmTrip,
+      soc_start: entry.socStart,
+      soc_end: entry.socEnd,
+      soc_used: entry.socUsed,
+      kwh_used: entry.kwhUsed,
+      avg: entry.avg,
+      external: entry.external || false,
+      price: entry.price ?? DEFAULT_HOME_PRICE,
+      cost: entry.cost ?? 0,
+      notes: entry.notes || ""
+    };
+  }
+
+  async function fetchTripsFromSupabase() {
+    const { data, error } = await supabase
+      .from("trips")
+      .select("*");
+
+    if (error) {
+      console.error("Error cargando trips desde Supabase:", error);
+      throw error;
+    }
+
+    return (data || [])
+      .map(normalizeTripFromRow)
+      .sort((a, b) => {
+        const da = sortDateValue(a.date);
+        const db = sortDateValue(b.date);
+        if (da !== db) return da - db;
+        return a.created_at - b.created_at;
+      });
+  }
+
+  async function insertTripToSupabase(entry) {
+    const row = tripToRow(entry);
+    const { error } = await supabase.from("trips").insert([row]);
+
+    if (error) {
+      console.error("Error insertando trip en Supabase:", error);
+      throw error;
+    }
+  }
+
+  async function importTripsToSupabase(entries) {
+    if (!entries.length) return { inserted: 0 };
+
+    const rows = entries.map(tripToRow);
+    const { error } = await supabase.from("trips").insert(rows);
+
+    if (error) {
+      console.error("Error importando CSV a Supabase:", error);
+      throw error;
+    }
+
+    return { inserted: rows.length };
+  }
+
+  async function deleteAllTripsFromSupabase() {
+    const { error } = await supabase
+      .from("trips")
+      .delete()
+      .not("id", "is", null);
+
+    if (error) {
+      console.error("Error borrando histórico en Supabase:", error);
+      throw error;
+    }
+  }
+
+  function getComputedFromForm() {
+    const kmStart = parseFloat(kmStartEl.value);
+    const kmEnd = parseFloat(kmEndEl.value);
+
+    const socStart = clamp(parseFloat(socStartEl.value), 0, 100);
+    const socEnd = clamp(parseFloat(socEndEl.value), 0, 100);
+
+    socStartEl.value = socStart;
+    socEndEl.value = socEnd;
+
+    const kmTrip = Number.isFinite(kmStart) && Number.isFinite(kmEnd) ? kmEnd - kmStart : NaN;
     const socUsed = socStart - socEnd;
-    const kwhUsed = (socUsed / 100) * BATTERY_KWH;
-    const avg = kmTrip > 0 ? (kwhUsed / kmTrip) * 100 : 0;
-    const cost = kwhUsed * price;
+    const kwhUsed = (Number.isFinite(socUsed) ? Math.max(0, socUsed) : NaN) / 100 * BATTERY_KWH;
+    const avg = Number.isFinite(kmTrip) && kmTrip > 0 && Number.isFinite(kwhUsed)
+      ? (kwhUsed / kmTrip) * 100
+      : NaN;
+
+    const price = Math.max(0, parseFloat(priceEl.value));
+    const cost = Number.isFinite(kwhUsed) ? kwhUsed * price : NaN;
 
     return { kmStart, kmEnd, socStart, socEnd, socUsed, kmTrip, kwhUsed, avg, price, cost };
   }
@@ -134,10 +278,10 @@ document.addEventListener("DOMContentLoaded", () => {
   function updateComputedCards() {
     const { kmTrip, kwhUsed, avg, cost } = getComputedFromForm();
 
-    kmTripEl.textContent = kmTrip > 0 ? formatKm(kmTrip) : "—";
-    kwhUsedEl.textContent = kwhUsed > 0 ? formatKwh(kwhUsed) : "—";
-    avgEl.textContent = avg > 0 ? formatAvg(avg) : "—";
-    costEl.textContent = cost >= 0 ? formatEuro(cost) : "—";
+    kmTripEl.textContent = Number.isFinite(kmTrip) && kmTrip > 0 ? formatKm(kmTrip) : "—";
+    kwhUsedEl.textContent = Number.isFinite(kwhUsed) ? formatKwh(kwhUsed) : "—";
+    avgEl.textContent = Number.isFinite(avg) ? formatAvg(avg) : "—";
+    costEl.textContent = Number.isFinite(cost) ? formatEuro(cost) : "—";
   }
 
   function clearForm() {
@@ -147,7 +291,7 @@ document.addEventListener("DOMContentLoaded", () => {
     climateEl.value = "No";
     seatsHeatEl.value = "No";
     externalChargeEl.checked = false;
-    priceEl.value = "0.1176";
+    priceEl.value = String(DEFAULT_HOME_PRICE);
     notesEl.value = "";
     advancedFields.classList.add("hidden");
     toggleAdvancedBtn.setAttribute("aria-expanded", "false");
@@ -157,6 +301,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const last = trips[trips.length - 1];
       kmStartEl.value = last.kmEnd;
       socStartEl.value = last.socEnd;
+      dateEl.value = new Date().toISOString().slice(0, 10);
     } else {
       kmStartEl.value = "";
       socStartEl.value = 80;
@@ -178,13 +323,14 @@ document.addEventListener("DOMContentLoaded", () => {
     tripModal.setAttribute("aria-hidden", "true");
   }
 
-  // ---------- STINTS ----------
   function buildStints(filteredTrips = trips) {
     if (!filteredTrips.length) return [];
 
     const sorted = [...filteredTrips].sort((a, b) => {
-      if (a.date === b.date) return a.created_at - b.created_at;
-      return a.date.localeCompare(b.date);
+      const da = sortDateValue(a.date);
+      const db = sortDateValue(b.date);
+      if (da !== db) return da - db;
+      return a.created_at - b.created_at;
     });
 
     const stints = [];
@@ -204,10 +350,7 @@ document.addEventListener("DOMContentLoaded", () => {
       current.push(trip);
     }
 
-    if (current.length) {
-      stints.push([...current]);
-    }
-
+    if (current.length) stints.push([...current]);
     return stints;
   }
 
@@ -234,7 +377,6 @@ document.addEventListener("DOMContentLoaded", () => {
     };
   }
 
-  // ---------- RENDER ----------
   function renderHero() {
     const totalKm = trips.reduce((sum, t) => sum + t.kmTrip, 0);
     const totalKwh = trips.reduce((sum, t) => sum + t.kwhUsed, 0);
@@ -374,8 +516,6 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function renderChart() {
-    if (!chartCanvas) return;
-
     const labels = trips.map((t, i) => `${i + 1}`);
     const data = trips.map(t => Number(t.avg.toFixed(1)));
 
@@ -385,9 +525,7 @@ document.addEventListener("DOMContentLoaded", () => {
       return "#f59e0b";
     });
 
-    if (chartInstance) {
-      chartInstance.destroy();
-    }
+    if (chartInstance) chartInstance.destroy();
 
     chartInstance = new Chart(chartCanvas, {
       type: "line",
@@ -423,7 +561,6 @@ document.addEventListener("DOMContentLoaded", () => {
     renderChart();
   }
 
-  // ---------- EVENTS ----------
   openTripModalBtn.addEventListener("click", () => {
     clearForm();
     openModal();
@@ -446,15 +583,13 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   externalChargeEl.addEventListener("change", () => {
-    if (externalChargeEl.checked) {
-      priceEl.value = "0.45";
-    } else {
-      priceEl.value = "0.1176";
-    }
+    priceEl.value = externalChargeEl.checked
+      ? String(DEFAULT_EXTERNAL_PRICE)
+      : String(DEFAULT_HOME_PRICE);
     updateComputedCards();
   });
 
-  saveTripBtn.addEventListener("click", () => {
+  saveTripBtn.addEventListener("click", async () => {
     const { kmStart, kmEnd, socStart, socEnd, socUsed, kmTrip, kwhUsed, avg, price, cost } = getComputedFromForm();
 
     if (!dateEl.value) {
@@ -471,7 +606,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     const trip = {
-      date: dateEl.value,
+      date: toDbDate(dateEl.value),
       tripType: tripTypeEl.value,
       kmStart,
       kmEnd,
@@ -481,6 +616,7 @@ document.addEventListener("DOMContentLoaded", () => {
       socUsed,
       kwhUsed,
       avg,
+      external: externalChargeEl.checked,
       price,
       cost,
       climate: climateEl.value,
@@ -489,10 +625,15 @@ document.addEventListener("DOMContentLoaded", () => {
       created_at: Date.now()
     };
 
-    trips.push(trip);
-    closeModal();
-    renderAll();
-    showMsg("Trayecto guardado.");
+    try {
+      await insertTripToSupabase(trip);
+      trips = await fetchTripsFromSupabase();
+      closeModal();
+      renderAll();
+      showMsg("Trayecto guardado en Supabase.");
+    } catch (err) {
+      alert("No se pudo guardar el trayecto en Supabase.");
+    }
   });
 
   toggleFiltersBtn.addEventListener("click", () => {
@@ -518,7 +659,7 @@ document.addEventListener("DOMContentLoaded", () => {
       headers.map(h => `"${String(t[h] ?? "").replaceAll('"', '""')}"`).join(",")
     );
 
-    const csv = [headers.join(","), ...rows].join("\\n");
+    const csv = [headers.join(","), ...rows].join("\n");
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
 
@@ -539,7 +680,8 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!file) return;
 
     const text = await file.text();
-    const lines = text.split(/\\r?\\n/).filter(Boolean);
+    const lines = text.split(/\r?\n/).filter(Boolean);
+
     if (lines.length < 2) {
       alert("CSV vacío o inválido.");
       return;
@@ -549,7 +691,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const imported = [];
 
     for (let i = 1; i < lines.length; i++) {
-      const values = lines[i].match(/(".*?"|[^",]+)(?=\\s*,|\\s*$)/g) || [];
+      const values = lines[i].match(/(".*?"|[^",]+)(?=\s*,|\s*$)/g) || [];
       const row = {};
 
       headers.forEach((header, idx) => {
@@ -567,6 +709,7 @@ document.addEventListener("DOMContentLoaded", () => {
         socUsed: Number(row.socUsed),
         kwhUsed: Number(row.kwhUsed),
         avg: Number(row.avg),
+        external: row.external === "true",
         price: Number(row.price),
         cost: Number(row.cost),
         climate: row.climate || "No",
@@ -576,25 +719,34 @@ document.addEventListener("DOMContentLoaded", () => {
       });
     }
 
-    if (replaceOnImportEl.checked) {
-      trips = imported;
-    } else {
-      const existingKeys = new Set(
-        trips.map(t => `${t.date}|${t.kmStart}|${t.kmEnd}|${t.socStart}|${t.socEnd}`)
-      );
+    try {
+      if (replaceOnImportEl.checked) {
+        await deleteAllTripsFromSupabase();
+        await importTripsToSupabase(imported);
+      } else {
+        const existingKeys = new Set(
+          trips.map(t => `${t.date}|${t.kmStart}|${t.kmEnd}|${t.socStart}|${t.socEnd}`)
+        );
 
-      imported.forEach(t => {
-        const key = `${t.date}|${t.kmStart}|${t.kmEnd}|${t.socStart}|${t.socEnd}`;
-        if (!existingKeys.has(key)) {
-          trips.push(t);
+        const uniqueToInsert = imported.filter(t => {
+          const key = `${t.date}|${t.kmStart}|${t.kmEnd}|${t.socStart}|${t.socEnd}`;
+          if (existingKeys.has(key)) return false;
           existingKeys.add(key);
-        }
-      });
-    }
+          return true;
+        });
 
-    renderAll();
-    showMsg("Importación completada.");
-    csvFileEl.value = "";
+        await importTripsToSupabase(uniqueToInsert);
+      }
+
+      trips = await fetchTripsFromSupabase();
+      renderAll();
+      showMsg("Importación completada.");
+    } catch (err) {
+      console.error(err);
+      alert("Error importando CSV a Supabase.");
+    } finally {
+      csvFileEl.value = "";
+    }
   });
 
   tabs.forEach(btn => {
@@ -618,6 +770,18 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
-  clearForm();
-  renderAll();
+  async function init() {
+    clearForm();
+
+    try {
+      trips = await fetchTripsFromSupabase();
+      renderAll();
+      showMsg(`Cargados ${trips.length} trayectos desde Supabase.`);
+    } catch (err) {
+      console.error(err);
+      showMsg("No se pudieron cargar los datos de Supabase.");
+    }
+  }
+
+  init();
 });
