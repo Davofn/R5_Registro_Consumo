@@ -74,6 +74,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // CHART
   const chartCanvas = document.getElementById("consumptionChart");
+  const chartAvgEl = document.getElementById("chartAvg");
+  const chartMinEl = document.getElementById("chartMin");
+  const chartMaxEl = document.getElementById("chartMax");
 
   // TABS
   const tabs = document.querySelectorAll(".tab");
@@ -164,7 +167,7 @@ document.addEventListener("DOMContentLoaded", () => {
       kmTrip: Number(row.km_trip),
       socStart: Number(row.soc_start),
       socEnd: Number(row.soc_end),
-      socUsed: Number(row.soc_used),
+      socUsed: Number(row.soc_start) - Number(row.soc_end),
       kwhUsed: Number(row.kwh_used),
       avg: Number(row.avg),
       external: !!row.external,
@@ -400,7 +403,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     totalKwhEl.textContent = trips.length ? formatKwh(totalKwh) : "—";
     totalCostEl.textContent = trips.length ? formatEuro(totalCost) : "—";
-    //tripCountEl.textContent = String(trips.length);
+    if (tripCountEl) tripCountEl.textContent = String(trips.length);
 
     const byType = {
       Ciudad: trips.filter(t => t.tripType === "Ciudad"),
@@ -489,7 +492,8 @@ document.addEventListener("DOMContentLoaded", () => {
           </div>
           ${trip.notes ? `<div class="trip-detail-notes">${trip.notes}</div>` : ""}
         </div>
-      `}).join("");
+      `;
+      }).join("");
 
       card.innerHTML = `
         <div class="stint-summary">
@@ -522,46 +526,95 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  function renderChart() {
-    const labels = trips.map((t, i) => `${i + 1}`);
-    const data = trips.map(t => Number(t.avg.toFixed(1)));
+  function getFilteredTripsForChart() {
+    return trips.filter(passesFilters);
+  }
 
-    const pointColors = trips.map(t => {
-      if (t.tripType === "Ciudad") return "#34d399";
-      if (t.tripType === "Mixto") return "#60a5fa";
-      return "#f59e0b";
+  function updateChartStats(values) {
+    if (!chartAvgEl && !chartMinEl && !chartMaxEl) return;
+
+    if (!values.length) {
+      if (chartAvgEl) chartAvgEl.textContent = "—";
+      if (chartMinEl) chartMinEl.textContent = "—";
+      if (chartMaxEl) chartMaxEl.textContent = "—";
+      return;
+    }
+
+    const avg = values.reduce((a, b) => a + b, 0) / values.length;
+    const min = Math.min(...values);
+    const max = Math.max(...values);
+
+    if (chartAvgEl) chartAvgEl.textContent = `${formatNumber(avg, 1)} kWh/100 km`;
+    if (chartMinEl) chartMinEl.textContent = `${formatNumber(min, 1)} kWh/100 km`;
+    if (chartMaxEl) chartMaxEl.textContent = `${formatNumber(max, 1)} kWh/100 km`;
+  }
+
+  function renderChart() {
+    if (!chartCanvas) return;
+
+    const filteredTrips = getFilteredTripsForChart();
+    const dataValues = filteredTrips
+      .map(t => Number(t.avg))
+      .filter(v => Number.isFinite(v) && v > 0);
+
+    updateChartStats(dataValues);
+
+    if (chartInstance) {
+      chartInstance.destroy();
+      chartInstance = null;
+    }
+
+    if (!dataValues.length) {
+      const ctx = chartCanvas.getContext("2d");
+      if (ctx) ctx.clearRect(0, 0, chartCanvas.width, chartCanvas.height);
+      return;
+    }
+
+    const labels = filteredTrips.map((trip, index) => {
+      const date = trip.date || "";
+      return date || `${index + 1}`;
     });
 
-    const avgValue = data.length
-      ? Number((data.reduce((s, v) => s + v, 0) / data.length).toFixed(2))
-      : 0;
-    const avgLine = data.map(() => avgValue);
+    const pointColors = dataValues.map(v => {
+      if (v < 14) return "#39d353";
+      if (v < 20) return "#f4c430";
+      return "#4e8cff";
+    });
 
-    if (chartInstance) chartInstance.destroy();
+    const pointBorderColors = dataValues.map(v => {
+      if (v < 14) return "#39d353";
+      if (v < 20) return "#f4c430";
+      return "#4e8cff";
+    });
 
-    chartInstance = new Chart(chartCanvas, {
+    const avg = dataValues.reduce((a, b) => a + b, 0) / dataValues.length;
+    const ctx = chartCanvas.getContext("2d");
+
+    chartInstance = new Chart(ctx, {
       type: "line",
       data: {
         labels,
         datasets: [
           {
             label: "kWh/100 km",
-            data,
-            borderColor: "#ffd400",
-            backgroundColor: "rgba(255,212,0,0.15)",
-            tension: 0.25,
+            data: dataValues,
+            borderColor: "#ffd43b",
+            backgroundColor: "rgba(255, 212, 59, 0.10)",
+            tension: 0.35,
             fill: true,
-            pointRadius: 5,
-            pointBackgroundColor: pointColors
+            pointBackgroundColor: pointColors,
+            pointBorderColor: pointBorderColors,
+            pointBorderWidth: 2,
+            pointRadius: 4,
+            pointHoverRadius: 6
           },
           {
-            label: `Media: ${avgValue.toFixed(1).replace(".", ",")} kWh`,
-            data: avgLine,
-            borderColor: "#ff5d73",
+            label: `Media: ${formatNumber(avg, 1)} kWh`,
+            data: Array(dataValues.length).fill(avg),
+            borderColor: "#ff6b8a",
+            borderDash: [6, 6],
             borderWidth: 2,
-            borderDash: [6, 4],
             pointRadius: 0,
-            fill: false,
             tension: 0
           }
         ]
@@ -569,16 +622,69 @@ document.addEventListener("DOMContentLoaded", () => {
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        scales: {
-          y: {
-            beginAtZero: false
-          }
+        interaction: {
+          mode: "nearest",
+          intersect: false
         },
         plugins: {
           legend: {
             labels: {
-              color: "#97a3bb",
-              font: { size: 12 }
+              color: "#b8c2d9",
+              boxWidth: 18,
+              boxHeight: 10,
+              padding: 14
+            }
+          },
+          tooltip: {
+            backgroundColor: "rgba(12,18,30,0.95)",
+            borderColor: "rgba(255,255,255,0.08)",
+            borderWidth: 1,
+            titleColor: "#eef4ff",
+            bodyColor: "#d8e1f5",
+            callbacks: {
+              title(items) {
+                const idx = items[0]?.dataIndex ?? 0;
+                const trip = filteredTrips[idx];
+                return trip?.date ? `Trayecto ${idx + 1} · ${trip.date}` : `Trayecto ${idx + 1}`;
+              },
+              label(context) {
+                return `Consumo: ${formatNumber(context.raw, 1)} kWh/100 km`;
+              },
+              afterBody(items) {
+                const idx = items[0]?.dataIndex ?? 0;
+                const trip = filteredTrips[idx];
+                if (!trip) return [];
+
+                return [
+                  `Tipo: ${trip.tripType}`,
+                  `Distancia: ${formatNumber(trip.kmTrip, 1)} km`,
+                  `Coste: ${formatNumber(trip.cost, 2)} €`
+                ];
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            ticks: {
+              color: "#7f8ca8",
+              maxRotation: 45,
+              minRotation: 45
+            },
+            grid: {
+              color: "rgba(255,255,255,0.03)"
+            }
+          },
+          y: {
+            beginAtZero: true,
+            ticks: {
+              color: "#7f8ca8",
+              callback(value) {
+                return value;
+              }
+            },
+            grid: {
+              color: "rgba(255,255,255,0.05)"
             }
           }
         }
@@ -664,6 +770,7 @@ document.addEventListener("DOMContentLoaded", () => {
       renderAll();
       showMsg("Trayecto guardado en Supabase.");
     } catch (err) {
+      console.error(err);
       alert("No se pudo guardar el trayecto en Supabase.");
     }
   });
@@ -673,7 +780,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   [filterTypeEl, filterExtrasEl].forEach(el => {
-    el.addEventListener("change", renderHistory);
+    el.addEventListener("change", renderAll);
   });
 
   exportCSVBtn.addEventListener("click", () => {
@@ -797,7 +904,9 @@ document.addEventListener("DOMContentLoaded", () => {
       if (panel) panel.classList.add("active");
 
       if (btn.dataset.tab === "chart") {
-        setTimeout(renderChart, 50);
+        setTimeout(() => {
+          renderChart();
+        }, 80);
       }
     });
   });
