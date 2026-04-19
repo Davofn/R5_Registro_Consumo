@@ -149,15 +149,34 @@
           <div class="chart-head">
             <div>
               <h3>Consumo por trayecto</h3>
-              <p>Colores según tipo de uso.</p>
-            </div>
-            <div class="chart-legend">
-              <div class="legend-item"><span class="legend-dot city"></span>Ciudad</div>
-              <div class="legend-item"><span class="legend-dot mixed"></span>Mixto</div>
-              <div class="legend-item"><span class="legend-dot highway"></span>Autopista</div>
+              <p>Evolución del consumo con media, mínimos y máximos.</p>
             </div>
           </div>
-          <canvas id="consumptionChart"></canvas>
+
+          <div class="chart-stats">
+            <article class="chart-stat">
+              <span>Media</span>
+              <strong id="chartAvg">—</strong>
+            </article>
+            <article class="chart-stat">
+              <span>Mínimo</span>
+              <strong id="chartMin">—</strong>
+            </article>
+            <article class="chart-stat">
+              <span>Máximo</span>
+              <strong id="chartMax">—</strong>
+            </article>
+          </div>
+
+          <div class="chart-legend">
+            <div class="legend-item"><span class="legend-dot city"></span>Eficiente</div>
+            <div class="legend-item"><span class="legend-dot mixed"></span>Normal</div>
+            <div class="legend-item"><span class="legend-dot highway"></span>Alto consumo</div>
+          </div>
+
+          <div class="chart-canvas-wrap">
+            <canvas id="consumptionChart"></canvas>
+          </div>
         </div>
       </section>
     </section>
@@ -277,7 +296,7 @@
   </div>
 
   <footer class="footer">
-    <small>v3.0.4 · Davo</small>
+    <small>v3.0.5 · Davo</small>
   </footer>
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
