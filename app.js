@@ -11,6 +11,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const BATTERY_KWH = 52;
   const DEFAULT_HOME_PRICE = 0.1176;
   const DEFAULT_EXTERNAL_PRICE = 0.45;
+  const GHOST_TYPE = "Consumo fantasma";
 
   // HERO
   const odoNowEl = document.getElementById("odoNow");
@@ -118,7 +119,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function formatAvg(value) {
-    return `${formatNumber(value, 1)} kWh`;
+    return `${formatNumber(value, 1)} kWh/100 km`;
   }
 
   function formatEuro(value) {
@@ -132,6 +133,14 @@ document.addEventListener("DOMContentLoaded", () => {
   function clamp(n, min, max) {
     if (Number.isNaN(n)) return min;
     return Math.max(min, Math.min(max, n));
+  }
+
+  function isGhostTrip(trip) {
+    return trip?.tripType === GHOST_TYPE;
+  }
+
+  function getDrivingTrips(arr = trips) {
+    return arr.filter(t => !isGhostTrip(t));
   }
 
   function toDbDate(isoDate) {
@@ -191,7 +200,7 @@ document.addEventListener("DOMContentLoaded", () => {
       soc_end: entry.socEnd,
       soc_used: entry.socUsed,
       kwh_used: entry.kwhUsed,
-      avg: entry.avg,
+      avg: Number.isFinite(entry.avg) ? entry.avg : null,
       external: entry.external || false,
       price: entry.price ?? DEFAULT_HOME_PRICE,
       cost: entry.cost ?? 0,
@@ -255,9 +264,27 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
+  function syncGhostTripUi() {
+    const isGhost = tripTypeEl.value === GHOST_TYPE;
+
+    if (isGhost && kmStartEl.value) {
+      kmEndEl.value = kmStartEl.value;
+    }
+
+    if (isGhost) {
+      kmEndEl.setAttribute("readonly", "readonly");
+    } else {
+      kmEndEl.removeAttribute("readonly");
+    }
+
+    updateComputedCards();
+  }
+
   function getComputedFromForm() {
+    const isGhost = tripTypeEl.value === GHOST_TYPE;
+
     const kmStart = parseFloat(kmStartEl.value);
-    const kmEnd = parseFloat(kmEndEl.value);
+    let kmEnd = parseFloat(kmEndEl.value);
 
     const socStart = clamp(parseFloat(socStartEl.value), 0, 100);
     const socEnd = clamp(parseFloat(socEndEl.value), 0, 100);
@@ -265,23 +292,31 @@ document.addEventListener("DOMContentLoaded", () => {
     socStartEl.value = socStart;
     socEndEl.value = socEnd;
 
-    const kmTrip = Number.isFinite(kmStart) && Number.isFinite(kmEnd) ? kmEnd - kmStart : NaN;
+    if (isGhost && Number.isFinite(kmStart)) {
+      kmEnd = kmStart;
+      kmEndEl.value = kmStart;
+    }
+
+    const kmTrip = isGhost
+      ? 0
+      : (Number.isFinite(kmStart) && Number.isFinite(kmEnd) ? kmEnd - kmStart : NaN);
+
     const socUsed = socStart - socEnd;
     const kwhUsed = (Number.isFinite(socUsed) ? Math.max(0, socUsed) : NaN) / 100 * BATTERY_KWH;
-    const avg = Number.isFinite(kmTrip) && kmTrip > 0 && Number.isFinite(kwhUsed)
+    const avg = !isGhost && Number.isFinite(kmTrip) && kmTrip > 0 && Number.isFinite(kwhUsed)
       ? (kwhUsed / kmTrip) * 100
       : NaN;
 
     const price = Math.max(0, parseFloat(priceEl.value));
     const cost = Number.isFinite(kwhUsed) ? kwhUsed * price : NaN;
 
-    return { kmStart, kmEnd, socStart, socEnd, socUsed, kmTrip, kwhUsed, avg, price, cost };
+    return { kmStart, kmEnd, socStart, socEnd, socUsed, kmTrip, kwhUsed, avg, price, cost, isGhost };
   }
 
   function updateComputedCards() {
     const { kmTrip, kwhUsed, avg, cost } = getComputedFromForm();
 
-    kmTripEl.textContent = Number.isFinite(kmTrip) && kmTrip > 0 ? formatKm(kmTrip) : "—";
+    kmTripEl.textContent = Number.isFinite(kmTrip) ? formatKm(kmTrip) : "—";
     kwhUsedEl.textContent = Number.isFinite(kwhUsed) ? formatKwh(kwhUsed) : "—";
     avgEl.textContent = Number.isFinite(avg) ? formatAvg(avg) : "—";
     costEl.textContent = Number.isFinite(cost) ? formatEuro(cost) : "—";
@@ -313,7 +348,7 @@ document.addEventListener("DOMContentLoaded", () => {
     kmEndEl.value = "";
     socEndEl.value = 60;
 
-    updateComputedCards();
+    syncGhostTripUi();
   }
 
   function openModal() {
@@ -358,14 +393,19 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function summarizeStint(stint) {
+    const drivingTrips = getDrivingTrips(stint);
+
     const totalKm = stint.reduce((sum, t) => sum + t.kmTrip, 0);
     const totalKwh = stint.reduce((sum, t) => sum + t.kwhUsed, 0);
     const totalCost = stint.reduce((sum, t) => sum + t.cost, 0);
 
+    const totalDrivingKm = drivingTrips.reduce((sum, t) => sum + t.kmTrip, 0);
+    const totalDrivingKwh = drivingTrips.reduce((sum, t) => sum + t.kwhUsed, 0);
+
     const socStart = stint[0].socStart;
     const socEnd = stint[stint.length - 1].socEnd;
     const socUsed = socStart - socEnd;
-    const avg = safeAvg(totalKwh, totalKm);
+    const avg = safeAvg(totalDrivingKwh, totalDrivingKm);
 
     return {
       count: stint.length,
@@ -381,23 +421,27 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function renderHero() {
-    const totalKm = trips.reduce((sum, t) => sum + t.kmTrip, 0);
-    const totalKwh = trips.reduce((sum, t) => sum + t.kwhUsed, 0);
+    const drivingTrips = getDrivingTrips(trips);
+
+    const totalKm = drivingTrips.reduce((sum, t) => sum + t.kmTrip, 0);
+    const totalDrivingKwh = drivingTrips.reduce((sum, t) => sum + t.kwhUsed, 0);
     const totalCost = trips.reduce((sum, t) => sum + t.cost, 0);
-    const avg = safeAvg(totalKwh, totalKm);
+
+    const avg = safeAvg(totalDrivingKwh, totalKm);
     const range = avg > 0 ? (BATTERY_KWH / avg) * 100 : 0;
     const lastOdo = trips.length ? trips[trips.length - 1].kmEnd : 0;
     const costPer100 = totalKm > 0 ? (totalCost / totalKm) * 100 : 0;
 
     odoNowEl.textContent = trips.length ? `${formatNumber(lastOdo, 1)} km` : "—";
-    globalAvgEl.textContent = trips.length ? formatAvg(avg) : "—";
-    realRangeEl.textContent = trips.length ? `${Math.round(range)} km` : "—";
-    costPer100El.textContent = trips.length ? formatEuro(costPer100) : "—";
-    totalKmEl.textContent = trips.length ? formatKm(totalKm) : "—";
+    globalAvgEl.textContent = totalKm > 0 ? formatAvg(avg) : "—";
+    realRangeEl.textContent = totalKm > 0 ? `${Math.round(range)} km` : "—";
+    costPer100El.textContent = totalKm > 0 ? formatEuro(costPer100) : "—";
+    totalKmEl.textContent = totalKm > 0 ? formatKm(totalKm) : "—";
   }
 
   function renderSummary() {
-    const totalKm = trips.reduce((sum, t) => sum + t.kmTrip, 0);
+    const drivingTrips = getDrivingTrips(trips);
+
     const totalKwh = trips.reduce((sum, t) => sum + t.kwhUsed, 0);
     const totalCost = trips.reduce((sum, t) => sum + t.cost, 0);
 
@@ -434,7 +478,7 @@ document.addEventListener("DOMContentLoaded", () => {
         <div class="stat-row"><span>Trayectos</span><strong>${last.count}</strong></div>
         <div class="stat-row"><span>Km totales</span><strong>${formatKm(last.totalKm)}</strong></div>
         <div class="stat-row"><span>Energía</span><strong>${formatKwh(last.totalKwh)}</strong></div>
-        <div class="stat-row"><span>Consumo medio</span><strong>${formatAvg(last.avg)}</strong></div>
+        <div class="stat-row"><span>Consumo medio</span><strong>${last.avg > 0 ? formatAvg(last.avg) : "—"}</strong></div>
         <div class="stat-row"><span>Coste total</span><strong>${formatEuro(last.totalCost)}</strong></div>
       </div>
     `;
@@ -475,7 +519,12 @@ document.addEventListener("DOMContentLoaded", () => {
       const detailRows = summary.trips.map(trip => {
         const climaIcon = trip.climate === "Sí" ? "❄️" : "—";
         const asientosIcon = trip.seatsHeat === "Sí" ? "🔥" : "—";
-        const typeClass = trip.tripType === "Ciudad" ? "type-city" : trip.tripType === "Mixto" ? "type-mixed" : "type-highway";
+
+        let typeClass = "type-highway";
+        if (trip.tripType === "Ciudad") typeClass = "type-city";
+        if (trip.tripType === "Mixto") typeClass = "type-mixed";
+        if (trip.tripType === GHOST_TYPE) typeClass = "type-ghost";
+
         return `
         <div class="trip-detail-row">
           <div class="trip-detail-line1">
@@ -485,7 +534,7 @@ document.addEventListener("DOMContentLoaded", () => {
           </div>
           <div class="trip-detail-line2">
             <span>${formatKm(trip.kmTrip)}</span>
-            <span>${formatAvg(trip.avg)}<small>/100km</small></span>
+            <span>${Number.isFinite(trip.avg) ? formatAvg(trip.avg) : "—"}<small>${Number.isFinite(trip.avg) ? "/100km" : ""}</small></span>
             <span>${climaIcon} <small>clima</small></span>
             <span>${asientosIcon} <small>asientos</small></span>
             <span>${formatEuro(trip.cost)}</span>
@@ -500,7 +549,7 @@ document.addEventListener("DOMContentLoaded", () => {
           <div class="stint-main">
             <div class="stint-title">🔋 ${summary.socStart}% → ${summary.socEnd}%</div>
             <div class="stint-sub">
-              ${formatKm(summary.totalKm)} · ${formatAvg(summary.avg)} · ${formatEuro(summary.totalCost)}
+              ${formatKm(summary.totalKm)} · ${summary.avg > 0 ? formatAvg(summary.avg) : "—"} · ${formatEuro(summary.totalCost)}
             </div>
             <div class="stint-meta">${summary.count} trayectos</div>
           </div>
@@ -527,7 +576,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function getFilteredTripsForChart() {
-    return trips.filter(passesFilters);
+    return getDrivingTrips(trips.filter(passesFilters));
   }
 
   function updateChartStats(values) {
@@ -720,6 +769,14 @@ document.addEventListener("DOMContentLoaded", () => {
     el.addEventListener("input", updateComputedCards);
   });
 
+  tripTypeEl.addEventListener("change", syncGhostTripUi);
+  kmStartEl.addEventListener("input", () => {
+    if (tripTypeEl.value === GHOST_TYPE && kmStartEl.value) {
+      kmEndEl.value = kmStartEl.value;
+    }
+    updateComputedCards();
+  });
+
   externalChargeEl.addEventListener("change", () => {
     priceEl.value = externalChargeEl.checked
       ? String(DEFAULT_EXTERNAL_PRICE)
@@ -728,13 +785,17 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   saveTripBtn.addEventListener("click", async () => {
-    const { kmStart, kmEnd, socStart, socEnd, socUsed, kmTrip, kwhUsed, avg, price, cost } = getComputedFromForm();
+    const { kmStart, kmEnd, socStart, socEnd, socUsed, kmTrip, kwhUsed, avg, price, cost, isGhost } = getComputedFromForm();
 
     if (!dateEl.value) {
       alert("Introduce una fecha.");
       return;
     }
-    if (kmEnd <= kmStart) {
+    if (!Number.isFinite(kmStart)) {
+      alert("Introduce el km inicio.");
+      return;
+    }
+    if (!isGhost && kmEnd <= kmStart) {
       alert("El km fin debe ser mayor que el km inicio.");
       return;
     }
@@ -864,11 +925,11 @@ document.addEventListener("DOMContentLoaded", () => {
         await importTripsToSupabase(imported);
       } else {
         const existingKeys = new Set(
-          trips.map(t => `${t.date}|${t.kmStart}|${t.kmEnd}|${t.socStart}|${t.socEnd}`)
+          trips.map(t => `${t.date}|${t.kmStart}|${t.kmEnd}|${t.socStart}|${t.socEnd}|${t.tripType}`)
         );
 
         const uniqueToInsert = imported.filter(t => {
-          const key = `${t.date}|${t.kmStart}|${t.kmEnd}|${t.socStart}|${t.socEnd}`;
+          const key = `${t.date}|${t.kmStart}|${t.kmEnd}|${t.socStart}|${t.socEnd}|${t.tripType}`;
           if (existingKeys.has(key)) return false;
           existingKeys.add(key);
           return true;
