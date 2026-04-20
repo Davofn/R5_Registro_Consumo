@@ -519,9 +519,9 @@ select:focus{
 }
 
 .stint-meta{
-  margin-top:6px;
-  font-size:.9rem;
-  opacity:.7;
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.45);
+  letter-spacing: 0.2px;
 }
 
 .stint-details{
