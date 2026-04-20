@@ -1102,3 +1102,9 @@ select:focus{
   min-width:auto;
   line-height:1;
 }
+/* Consumo fantasma */
+.type-ghost{
+  background: rgba(139, 92, 246, 0.18); /* morado suave */
+  color: #c4b5fd;
+  border: 1px solid rgba(139, 92, 246, 0.35);
+}
