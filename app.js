@@ -164,6 +164,17 @@ document.addEventListener("DOMContentLoaded", () => {
     return new Date(y, m - 1, d).getTime();
   }
 
+  function sortTrips(a, b) {
+    const da = sortDateValue(a.date);
+    const db = sortDateValue(b.date);
+    if (da !== db) return da - db;
+
+    // Dentro del mismo día: primero mayor SOC inicial
+    if (a.socStart !== b.socStart) return b.socStart - a.socStart;
+
+    return a.created_at - b.created_at;
+  }
+
   function normalizeTripFromRow(row) {
     return {
       kind: "trip",
@@ -221,12 +232,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     return (data || [])
       .map(normalizeTripFromRow)
-      .sort((a, b) => {
-        const da = sortDateValue(a.date);
-        const db = sortDateValue(b.date);
-        if (da !== db) return da - db;
-        return a.created_at - b.created_at;
-      });
+      .sort(sortTrips);
   }
 
   async function insertTripToSupabase(entry) {
@@ -238,6 +244,7 @@ document.addEventListener("DOMContentLoaded", () => {
       throw error;
     }
   }
+
   async function updateTripInSupabase(id, entry) {
     const row = tripToRow(entry);
     const { error } = await supabase
@@ -250,6 +257,7 @@ document.addEventListener("DOMContentLoaded", () => {
       throw error;
     }
   }
+
   async function importTripsToSupabase(entries) {
     if (!entries.length) return { inserted: 0 };
 
@@ -338,6 +346,7 @@ document.addEventListener("DOMContentLoaded", () => {
     editingTripId = null;
     document.getElementById("tripModalTitle").textContent = "Añadir trayecto";
     saveTripBtn.textContent = "Guardar trayecto";
+
     const today = new Date().toISOString().slice(0, 10);
     dateEl.value = today;
     tripTypeEl.value = "Mixto";
@@ -351,7 +360,7 @@ document.addEventListener("DOMContentLoaded", () => {
     toggleAdvancedBtn.textContent = "Mostrar opciones avanzadas";
 
     if (trips.length > 0) {
-      const last = trips[trips.length - 1];
+      const last = [...trips].sort(sortTrips)[trips.length - 1];
       kmStartEl.value = last.kmEnd;
       socStartEl.value = last.socEnd;
       dateEl.value = new Date().toISOString().slice(0, 10);
@@ -365,6 +374,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     syncGhostTripUi();
   }
+
   function fillFormForEdit(trip) {
     editingTripId = trip.id;
 
@@ -390,6 +400,7 @@ document.addEventListener("DOMContentLoaded", () => {
     syncGhostTripUi();
     updateComputedCards();
   }
+
   function openModal() {
     tripModal.classList.remove("hidden");
     tripModal.setAttribute("aria-hidden", "false");
@@ -403,12 +414,7 @@ document.addEventListener("DOMContentLoaded", () => {
   function buildStints(filteredTrips = trips) {
     if (!filteredTrips.length) return [];
 
-    const sorted = [...filteredTrips].sort((a, b) => {
-      const da = sortDateValue(a.date);
-      const db = sortDateValue(b.date);
-      if (da !== db) return da - db;
-      return a.created_at - b.created_at;
-    });
+    const sorted = [...filteredTrips].sort(sortTrips);
 
     const stints = [];
     let current = [];
@@ -468,7 +474,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const avg = safeAvg(totalDrivingKwh, totalKm);
     const range = avg > 0 ? (BATTERY_KWH / avg) * 100 : 0;
-    const lastOdo = trips.length ? trips[trips.length - 1].kmEnd : 0;
+    const lastOdo = trips.length ? [...trips].sort(sortTrips)[trips.length - 1].kmEnd : 0;
     const costPer100 = totalKm > 0 ? (totalCost / totalKm) * 100 : 0;
 
     odoNowEl.textContent = trips.length ? `${formatNumber(lastOdo, 1)} km` : "—";
@@ -479,8 +485,6 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function renderSummary() {
-    const drivingTrips = getDrivingTrips(trips);
-
     const totalKwh = trips.reduce((sum, t) => sum + t.kwhUsed, 0);
     const totalCost = trips.reduce((sum, t) => sum + t.cost, 0);
 
@@ -564,7 +568,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (trip.tripType === "Mixto") typeClass = "type-mixed";
         if (trip.tripType === GHOST_TYPE) typeClass = "type-ghost";
 
-     return `
+        return `
   <div class="trip-detail-row">
     <div class="trip-detail-line1">
       <div class="trip-detail-line1-left">
@@ -576,7 +580,7 @@ document.addEventListener("DOMContentLoaded", () => {
     </div>
     <div class="trip-detail-line2">
       <span>${formatKm(trip.kmTrip)}</span>
-      <span>${Number.isFinite(trip.avg) ? formatAvg(trip.avg) : "—"}<small>${Number.isFinite(trip.avg) ? "/100km" : ""}</small></span>
+      <span>${Number.isFinite(trip.avg) && trip.avg > 0 ? formatAvg(trip.avg) : "—"}<small>${Number.isFinite(trip.avg) && trip.avg > 0 ? "/100km" : ""}</small></span>
       <span>${climaIcon} <small>clima</small></span>
       <span>${asientosIcon} <small>asientos</small></span>
       <span>${formatEuro(trip.cost)}</span>
@@ -615,7 +619,8 @@ document.addEventListener("DOMContentLoaded", () => {
         btn.textContent = isHidden ? "Ocultar detalle" : "Ver detalle";
       });
     });
-        historyListEl.querySelectorAll(".trip-edit-btn").forEach(btn => {
+
+    historyListEl.querySelectorAll(".trip-edit-btn").forEach(btn => {
       btn.addEventListener("click", () => {
         const trip = trips.find(t => String(t.id) === String(btn.dataset.tripId));
         if (!trip) return;
@@ -875,6 +880,8 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     try {
+      const wasEditing = !!editingTripId;
+
       if (editingTripId) {
         await updateTripInSupabase(editingTripId, trip);
       } else {
@@ -885,7 +892,7 @@ document.addEventListener("DOMContentLoaded", () => {
       closeModal();
       clearForm();
       renderAll();
-      showMsg(editingTripId ? "Trayecto actualizado." : "Trayecto guardado en Supabase.");
+      showMsg(wasEditing ? "Trayecto actualizado." : "Trayecto guardado en Supabase.");
     } catch (err) {
       console.error(err);
       alert(editingTripId
