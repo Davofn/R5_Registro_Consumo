@@ -1108,3 +1108,9 @@ select:focus{
   color: #c4b5fd;
   border: 1px solid rgba(139, 92, 246, 0.35);
 }
+#extrasInsights small,
+#typeInsights small {
+  color: rgba(255,255,255,.6);
+  font-weight: 500;
+  margin-left: 6px;
+}
