@@ -66,7 +66,7 @@
       <div class="tabs" role="tablist" aria-label="Secciones">
         <button class="tab active" data-tab="summary" role="tab" aria-selected="true">Resumen</button>
         <button class="tab" data-tab="history" role="tab" aria-selected="false">Histórico</button>
-        <button class="tab" data-tab="chart" role="tab" aria-selected="false">Gráfico</button>
+        <button class="tab" data-tab="insights" role="tab" aria-selected="false">Insights</button>
       </div>
 
       <section class="tab-panel active" id="tab-summary" role="tabpanel">
@@ -144,42 +144,32 @@
         <div id="historyList" class="history-list"></div>
       </section>
 
-      <section class="tab-panel" id="tab-chart" role="tabpanel">
-        <div class="chart-card">
-          <div class="chart-head">
-            <div>
-              <h3>Consumo por trayecto</h3>
-              <p>Evolución del consumo con media, mínimos y máximos.</p>
-            </div>
-          </div>
+<section class="tab-panel" id="tab-insights" role="tabpanel">
+  <div class="summary-grid">
+    <article class="panel-card">
+      <div class="panel-head">
+        <h3>Impacto de extras</h3>
+      </div>
+      <div id="extrasInsights" class="stats-list">
+        <div class="stat-row"><span>Sin extras</span><strong>—</strong></div>
+        <div class="stat-row"><span>Clima</span><strong>—</strong></div>
+        <div class="stat-row"><span>Asientos</span><strong>—</strong></div>
+        <div class="stat-row"><span>Clima + asientos</span><strong>—</strong></div>
+      </div>
+    </article>
 
-          <div class="chart-stats">
-            <article class="chart-stat">
-              <span>Media</span>
-              <strong id="chartAvg">—</strong>
-            </article>
-            <article class="chart-stat">
-              <span>Mínimo</span>
-              <strong id="chartMin">—</strong>
-            </article>
-            <article class="chart-stat">
-              <span>Máximo</span>
-              <strong id="chartMax">—</strong>
-            </article>
-          </div>
-
-          <div class="chart-legend">
-            <div class="legend-item"><span class="legend-dot city"></span>Eficiente</div>
-            <div class="legend-item"><span class="legend-dot mixed"></span>Normal</div>
-            <div class="legend-item"><span class="legend-dot highway"></span>Alto consumo</div>
-          </div>
-
-          <div class="chart-canvas-wrap">
-            <canvas id="consumptionChart"></canvas>
-          </div>
-        </div>
-      </section>
-    </section>
+    <article class="panel-card wide">
+      <div class="panel-head">
+        <h3>Uso y eficiencia por tipo</h3>
+      </div>
+      <div id="typeInsights" class="stats-list">
+        <div class="stat-row"><span>Ciudad</span><strong>—</strong></div>
+        <div class="stat-row"><span>Mixto</span><strong>—</strong></div>
+        <div class="stat-row"><span>Autopista</span><strong>—</strong></div>
+      </div>
+    </article>
+  </div>
+</section>
 
     <p class="hint" id="msg" aria-live="polite"></p>
   </main>
@@ -297,7 +287,7 @@
   </div>
 
   <footer class="footer">
-    <small>v3.2.2 · Davo</small>
+    <small>v3.3 · Davo</small>
   </footer>
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
