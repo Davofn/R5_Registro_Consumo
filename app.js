@@ -564,26 +564,26 @@ document.addEventListener("DOMContentLoaded", () => {
         if (trip.tripType === "Mixto") typeClass = "type-mixed";
         if (trip.tripType === GHOST_TYPE) typeClass = "type-ghost";
 
-        return 
-        <div class="trip-detail-row">
-          <div class="trip-detail-line1">
-            <div class="trip-detail-line1-left">
-              <span class="trip-detail-date">${trip.date}</span>
-              <span class="type-chip ${typeClass}">${trip.tripType}</span>
-              <span class="trip-detail-soc">🔋 ${trip.socStart}% → ${trip.socEnd}%</span>
-            </div>
-            <button class="ghost trip-edit-btn" data-trip-id="${trip.id}" aria-label="Editar trayecto" title="Editar trayecto">✏️</button>
-          </div>
-          <div class="trip-detail-line2">
-            <span>${formatKm(trip.kmTrip)}</span>
-            <span>${Number.isFinite(trip.avg) ? formatAvg(trip.avg) : "—"}<small>${Number.isFinite(trip.avg) ? "/100km" : ""}</small></span>
-            <span>${climaIcon} <small>clima</small></span>
-            <span>${asientosIcon} <small>asientos</small></span>
-            <span>${formatEuro(trip.cost)}</span>
-          </div>
-          ${trip.notes ? `<div class="trip-detail-notes">${trip.notes}</div>` : ""}
-        </div>
-      `;
+     return `
+  <div class="trip-detail-row">
+    <div class="trip-detail-line1">
+      <div class="trip-detail-line1-left">
+        <span class="trip-detail-date">${trip.date}</span>
+        <span class="type-chip ${typeClass}">${trip.tripType}</span>
+        <span class="trip-detail-soc">🔋 ${trip.socStart}% → ${trip.socEnd}%</span>
+      </div>
+      <button class="ghost trip-edit-btn" data-trip-id="${trip.id}" aria-label="Editar trayecto" title="Editar trayecto">✏️</button>
+    </div>
+    <div class="trip-detail-line2">
+      <span>${formatKm(trip.kmTrip)}</span>
+      <span>${Number.isFinite(trip.avg) ? formatAvg(trip.avg) : "—"}<small>${Number.isFinite(trip.avg) ? "/100km" : ""}</small></span>
+      <span>${climaIcon} <small>clima</small></span>
+      <span>${asientosIcon} <small>asientos</small></span>
+      <span>${formatEuro(trip.cost)}</span>
+    </div>
+    ${trip.notes ? `<div class="trip-detail-notes">${trip.notes}</div>` : ""}
+  </div>
+`;
       }).join("");
 
       card.innerHTML = `
