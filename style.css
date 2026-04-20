@@ -1083,3 +1083,22 @@ select:focus{
     height:280px !important;
   }
 }
+.trip-detail-line1{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+}
+
+.trip-detail-line1-left{
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  gap:8px;
+}
+
+.trip-edit-btn{
+  padding:6px 10px;
+  min-width:auto;
+  line-height:1;
+}
