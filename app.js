@@ -437,33 +437,38 @@ document.addEventListener("DOMContentLoaded", () => {
     return stints;
   }
 
-  function summarizeStint(stint) {
-    const drivingTrips = getDrivingTrips(stint);
+function summarizeStint(stint) {
+  const drivingTrips = getDrivingTrips(stint);
 
-    const totalKm = stint.reduce((sum, t) => sum + t.kmTrip, 0);
-    const totalKwh = stint.reduce((sum, t) => sum + t.kwhUsed, 0);
-    const totalCost = stint.reduce((sum, t) => sum + t.cost, 0);
+  const totalKm = stint.reduce((sum, t) => sum + t.kmTrip, 0);
+  const totalKwh = stint.reduce((sum, t) => sum + t.kwhUsed, 0);
+  const totalCost = stint.reduce((sum, t) => sum + t.cost, 0);
 
-    const totalDrivingKm = drivingTrips.reduce((sum, t) => sum + t.kmTrip, 0);
-    const totalDrivingKwh = drivingTrips.reduce((sum, t) => sum + t.kwhUsed, 0);
+  const totalDrivingKm = drivingTrips.reduce((sum, t) => sum + t.kmTrip, 0);
+  const totalDrivingKwh = drivingTrips.reduce((sum, t) => sum + t.kwhUsed, 0);
 
-    const socStart = stint[0].socStart;
-    const socEnd = stint[stint.length - 1].socEnd;
-    const socUsed = socStart - socEnd;
-    const avg = safeAvg(totalDrivingKwh, totalDrivingKm);
+  const socStart = stint[0].socStart;
+  const socEnd = stint[stint.length - 1].socEnd;
+  const socUsed = socStart - socEnd;
+  const avg = safeAvg(totalDrivingKwh, totalDrivingKm);
 
-    return {
-      count: stint.length,
-      totalKm,
-      totalKwh,
-      totalCost,
-      socStart,
-      socEnd,
-      socUsed,
-      avg,
-      trips: stint
-    };
-  }
+  const startDate = stint[0].date;
+  const endDate = stint[stint.length - 1].date;
+
+  return {
+    count: stint.length,
+    totalKm,
+    totalKwh,
+    totalCost,
+    socStart,
+    socEnd,
+    socUsed,
+    avg,
+    startDate,
+    endDate,
+    trips: stint
+  };
+}
 
   function renderHero() {
     const drivingTrips = getDrivingTrips(trips);
@@ -597,7 +602,12 @@ document.addEventListener("DOMContentLoaded", () => {
             <div class="stint-sub">
               ${formatKm(summary.totalKm)} · ${summary.avg > 0 ? formatAvg(summary.avg) : "—"} · ${formatEuro(summary.totalCost)}
             </div>
-            <div class="stint-meta">${summary.count} trayectos</div>
+            <div class="stint-meta">
+  ${summary.count} trayectos ·
+  ${summary.startDate === summary.endDate
+    ? summary.startDate
+    : `${summary.startDate} - ${summary.endDate}`}
+</div>
           </div>
           <button class="ghost toggle-details" data-target="${detailsId}">Ver detalle</button>
         </div>
