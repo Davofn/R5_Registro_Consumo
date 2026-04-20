@@ -6,7 +6,6 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 document.addEventListener("DOMContentLoaded", () => {
   let trips = [];
-  let chartInstance = null;
   let editingTripId = null;
 
   const BATTERY_KWH = 52;
@@ -74,20 +73,18 @@ document.addEventListener("DOMContentLoaded", () => {
   // MSG
   const msgEl = document.getElementById("msg");
 
-  // CHART
-  const chartCanvas = document.getElementById("consumptionChart");
-  const chartAvgEl = document.getElementById("chartAvg");
-  const chartMinEl = document.getElementById("chartMin");
-  const chartMaxEl = document.getElementById("chartMax");
-
+  // INSIGHTS
+  const extrasInsightsEl = document.getElementById("extrasInsights");
+  const typeInsightsEl = document.getElementById("typeInsights");
+  
   // TABS
   const tabs = document.querySelectorAll(".tab");
   const panels = document.querySelectorAll(".tab-panel");
 
   const required = [
-    tripModal, openTripModalBtn, closeTripModalBtn, closeTripModalBackdrop,
+     tripModal, openTripModalBtn, closeTripModalBtn, closeTripModalBackdrop,
     toggleAdvancedBtn, advancedFields, saveTripBtn,
-    historyListEl, chartCanvas
+    historyListEl, extrasInsightsEl, typeInsightsEl
   ];
 
   if (required.some(el => !el)) {
@@ -639,178 +636,104 @@ function summarizeStint(stint) {
       });
     });
   }
-
-  function getFilteredTripsForChart() {
-    return getDrivingTrips(trips.filter(passesFilters));
+  function getWeightedAvg(arr) {
+    const driving = getDrivingTrips(arr);
+    const km = driving.reduce((sum, t) => sum + t.kmTrip, 0);
+    const kwh = driving.reduce((sum, t) => sum + t.kwhUsed, 0);
+    return km > 0 ? safeAvg(kwh, km) : NaN;
   }
 
-  function updateChartStats(values) {
-    if (!chartAvgEl && !chartMinEl && !chartMaxEl) return;
-
-    if (!values.length) {
-      if (chartAvgEl) chartAvgEl.textContent = "—";
-      if (chartMinEl) chartMinEl.textContent = "—";
-      if (chartMaxEl) chartMaxEl.textContent = "—";
-      return;
-    }
-
-    const avg = values.reduce((a, b) => a + b, 0) / values.length;
-    const min = Math.min(...values);
-    const max = Math.max(...values);
-
-    if (chartAvgEl) chartAvgEl.textContent = `${formatNumber(avg, 1)} kWh/100 km`;
-    if (chartMinEl) chartMinEl.textContent = `${formatNumber(min, 1)} kWh/100 km`;
-    if (chartMaxEl) chartMaxEl.textContent = `${formatNumber(max, 1)} kWh/100 km`;
+  function formatDeltaPercent(base, current) {
+    if (!Number.isFinite(base) || base <= 0 || !Number.isFinite(current)) return "—";
+    const delta = ((current - base) / base) * 100;
+    if (Math.abs(delta) < 0.05) return "Base";
+    return `${delta > 0 ? "+" : ""}${formatNumber(delta, 0)}%`;
   }
 
-  function renderChart() {
-    if (!chartCanvas) return;
+  function formatRangeFromAvg(avg) {
+    if (!Number.isFinite(avg) || avg <= 0) return "—";
+    const range = (BATTERY_KWH / avg) * 100;
+    return `${Math.round(range)} km`;
+  }
 
-    const filteredTrips = getFilteredTripsForChart();
-    const dataValues = filteredTrips
-      .map(t => Number(t.avg))
-      .filter(v => Number.isFinite(v) && v > 0);
+  function renderInsights() {
+    const drivingTrips = getDrivingTrips(trips);
 
-    updateChartStats(dataValues);
+    // ===== BLOQUE 1: IMPACTO EXTRAS =====
+    const noExtras = drivingTrips.filter(t => t.climate !== "Sí" && t.seatsHeat !== "Sí");
+    const onlyClimate = drivingTrips.filter(t => t.climate === "Sí" && t.seatsHeat !== "Sí");
+    const onlySeats = drivingTrips.filter(t => t.climate !== "Sí" && t.seatsHeat === "Sí");
+    const bothExtras = drivingTrips.filter(t => t.climate === "Sí" && t.seatsHeat === "Sí");
 
-    if (chartInstance) {
-      chartInstance.destroy();
-      chartInstance = null;
-    }
+    const avgNoExtras = getWeightedAvg(noExtras);
+    const avgClimate = getWeightedAvg(onlyClimate);
+    const avgSeats = getWeightedAvg(onlySeats);
+    const avgBoth = getWeightedAvg(bothExtras);
 
-    if (!dataValues.length) {
-      const ctx = chartCanvas.getContext("2d");
-      if (ctx) ctx.clearRect(0, 0, chartCanvas.width, chartCanvas.height);
-      return;
-    }
-
-    const labels = filteredTrips.map((trip, index) => {
-      const date = trip.date || "";
-      return date || `${index + 1}`;
-    });
-
-    const pointColors = dataValues.map(v => {
-      if (v < 14) return "#39d353";
-      if (v < 20) return "#f4c430";
-      return "#4e8cff";
-    });
-
-    const pointBorderColors = dataValues.map(v => {
-      if (v < 14) return "#39d353";
-      if (v < 20) return "#f4c430";
-      return "#4e8cff";
-    });
-
-    const avg = dataValues.reduce((a, b) => a + b, 0) / dataValues.length;
-    const ctx = chartCanvas.getContext("2d");
-
-    chartInstance = new Chart(ctx, {
-      type: "line",
-      data: {
-        labels,
-        datasets: [
-          {
-            label: "kWh/100 km",
-            data: dataValues,
-            borderColor: "#ffd43b",
-            backgroundColor: "rgba(255, 212, 59, 0.10)",
-            tension: 0.35,
-            fill: true,
-            pointBackgroundColor: pointColors,
-            pointBorderColor: pointBorderColors,
-            pointBorderWidth: 2,
-            pointRadius: 4,
-            pointHoverRadius: 6
-          },
-          {
-            label: `Media: ${formatNumber(avg, 1)} kWh`,
-            data: Array(dataValues.length).fill(avg),
-            borderColor: "#ff6b8a",
-            borderDash: [6, 6],
-            borderWidth: 2,
-            pointRadius: 0,
-            tension: 0
-          }
-        ]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        interaction: {
-          mode: "nearest",
-          intersect: false
-        },
-        plugins: {
-          legend: {
-            labels: {
-              color: "#b8c2d9",
-              boxWidth: 18,
-              boxHeight: 10,
-              padding: 14
-            }
-          },
-          tooltip: {
-            backgroundColor: "rgba(12,18,30,0.95)",
-            borderColor: "rgba(255,255,255,0.08)",
-            borderWidth: 1,
-            titleColor: "#eef4ff",
-            bodyColor: "#d8e1f5",
-            callbacks: {
-              title(items) {
-                const idx = items[0]?.dataIndex ?? 0;
-                const trip = filteredTrips[idx];
-                return trip?.date ? `Trayecto ${idx + 1} · ${trip.date}` : `Trayecto ${idx + 1}`;
-              },
-              label(context) {
-                return `Consumo: ${formatNumber(context.raw, 1)} kWh/100 km`;
-              },
-              afterBody(items) {
-                const idx = items[0]?.dataIndex ?? 0;
-                const trip = filteredTrips[idx];
-                if (!trip) return [];
-
-                return [
-                  `Tipo: ${trip.tripType}`,
-                  `Distancia: ${formatNumber(trip.kmTrip, 1)} km`,
-                  `Coste: ${formatNumber(trip.cost, 2)} €`
-                ];
-              }
-            }
-          }
-        },
-        scales: {
-          x: {
-            ticks: {
-              color: "#7f8ca8",
-              maxRotation: 45,
-              minRotation: 45
-            },
-            grid: {
-              color: "rgba(255,255,255,0.03)"
-            }
-          },
-          y: {
-            beginAtZero: true,
-            ticks: {
-              color: "#7f8ca8",
-              callback(value) {
-                return value;
-              }
-            },
-            grid: {
-              color: "rgba(255,255,255,0.05)"
-            }
-          }
-        }
+    function renderExtraLine(label, avgValue, baseValue) {
+      if (!Number.isFinite(avgValue)) {
+        return `<div class="stat-row"><span>${label}</span><strong>—</strong></div>`;
       }
-    });
-  }
 
+      const suffix = label === "Sin extras" ? "" : ` <small>${formatDeltaPercent(baseValue, avgValue)}</small>`;
+      return `<div class="stat-row"><span>${label}</span><strong>${formatAvg(avgValue)}${suffix}</strong></div>`;
+    }
+
+    extrasInsightsEl.innerHTML = `
+      ${renderExtraLine("Sin extras", avgNoExtras, avgNoExtras)}
+      ${renderExtraLine("Clima", avgClimate, avgNoExtras)}
+      ${renderExtraLine("Asientos", avgSeats, avgNoExtras)}
+      ${renderExtraLine("Clima + asientos", avgBoth, avgNoExtras)}
+    `;
+
+    // ===== BLOQUE 2: USO Y EFICIENCIA POR TIPO =====
+    const byType = {
+      Ciudad: drivingTrips.filter(t => t.tripType === "Ciudad"),
+      Mixto: drivingTrips.filter(t => t.tripType === "Mixto"),
+      Autopista: drivingTrips.filter(t => t.tripType === "Autopista")
+    };
+
+    const totalDrivingKm = drivingTrips.reduce((sum, t) => sum + t.kmTrip, 0);
+
+    const typeStats = Object.entries(byType).map(([name, arr]) => {
+      const km = arr.reduce((sum, t) => sum + t.kmTrip, 0);
+      const avg = getWeightedAvg(arr);
+      const usagePct = totalDrivingKm > 0 ? (km / totalDrivingKm) * 100 : NaN;
+      return { name, km, avg, usagePct };
+    });
+
+    const validTypeStats = typeStats.filter(t => Number.isFinite(t.avg) && t.avg > 0);
+    const bestAvg = validTypeStats.length ? Math.min(...validTypeStats.map(t => t.avg)) : NaN;
+
+    function renderTypeLine(stat) {
+      if (!Number.isFinite(stat.avg) || stat.avg <= 0) {
+        return `<div class="stat-row"><span>${stat.name}</span><strong>—</strong></div>`;
+      }
+
+      const usageText = Number.isFinite(stat.usagePct) ? `${formatNumber(stat.usagePct, 0)}% uso` : "—";
+      const penaltyText = formatDeltaPercent(bestAvg, stat.avg);
+      const rangeText = formatRangeFromAvg(stat.avg);
+
+      return `
+        <div class="stat-row">
+          <span>${stat.name}</span>
+          <strong>${usageText} · ${penaltyText} · ${rangeText}</strong>
+        </div>
+      `;
+    }
+
+    typeInsightsEl.innerHTML = `
+      ${renderTypeLine(typeStats.find(t => t.name === "Ciudad"))}
+      ${renderTypeLine(typeStats.find(t => t.name === "Mixto"))}
+      ${renderTypeLine(typeStats.find(t => t.name === "Autopista"))}
+    `;
+  }
+  
   function renderAll() {
     renderHero();
     renderSummary();
     renderHistory();
-    renderChart();
+    renderInsights();
   }
 
   openTripModalBtn.addEventListener("click", () => {
@@ -1038,12 +961,6 @@ function summarizeStint(stint) {
 
       const panel = document.getElementById(`tab-${btn.dataset.tab}`);
       if (panel) panel.classList.add("active");
-
-      if (btn.dataset.tab === "chart") {
-        setTimeout(() => {
-          renderChart();
-        }, 80);
-      }
     });
   });
 
