@@ -564,8 +564,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (trip.tripType === "Mixto") typeClass = "type-mixed";
         if (trip.tripType === GHOST_TYPE) typeClass = "type-ghost";
 
-        return `
-                return `
+        return 
         <div class="trip-detail-row">
           <div class="trip-detail-line1">
             <div class="trip-detail-line1-left">
