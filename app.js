@@ -7,6 +7,7 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 document.addEventListener("DOMContentLoaded", () => {
   let trips = [];
   let chartInstance = null;
+  let editingTripId = null;
 
   const BATTERY_KWH = 52;
   const DEFAULT_HOME_PRICE = 0.1176;
@@ -237,7 +238,18 @@ document.addEventListener("DOMContentLoaded", () => {
       throw error;
     }
   }
+  async function updateTripInSupabase(id, entry) {
+    const row = tripToRow(entry);
+    const { error } = await supabase
+      .from("trips")
+      .update(row)
+      .eq("id", id);
 
+    if (error) {
+      console.error("Error actualizando trip en Supabase:", error);
+      throw error;
+    }
+  }
   async function importTripsToSupabase(entries) {
     if (!entries.length) return { inserted: 0 };
 
@@ -323,6 +335,9 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function clearForm() {
+    editingTripId = null;
+    document.getElementById("tripModalTitle").textContent = "Añadir trayecto";
+    saveTripBtn.textContent = "Guardar trayecto";
     const today = new Date().toISOString().slice(0, 10);
     dateEl.value = today;
     tripTypeEl.value = "Mixto";
@@ -350,7 +365,31 @@ document.addEventListener("DOMContentLoaded", () => {
 
     syncGhostTripUi();
   }
+  function fillFormForEdit(trip) {
+    editingTripId = trip.id;
 
+    dateEl.value = dbDateToInput(trip.date);
+    tripTypeEl.value = trip.tripType;
+    kmStartEl.value = trip.kmStart;
+    kmEndEl.value = trip.kmEnd;
+    socStartEl.value = trip.socStart;
+    socEndEl.value = trip.socEnd;
+    climateEl.value = trip.climate || "No";
+    seatsHeatEl.value = trip.seatsHeat || "No";
+    externalChargeEl.checked = !!trip.external;
+    priceEl.value = String(trip.price ?? DEFAULT_HOME_PRICE);
+    notesEl.value = trip.notes || "";
+
+    advancedFields.classList.remove("hidden");
+    toggleAdvancedBtn.setAttribute("aria-expanded", "true");
+    toggleAdvancedBtn.textContent = "Ocultar opciones avanzadas";
+
+    document.getElementById("tripModalTitle").textContent = "Editar trayecto";
+    saveTripBtn.textContent = "Guardar cambios";
+
+    syncGhostTripUi();
+    updateComputedCards();
+  }
   function openModal() {
     tripModal.classList.remove("hidden");
     tripModal.setAttribute("aria-hidden", "false");
@@ -526,11 +565,15 @@ document.addEventListener("DOMContentLoaded", () => {
         if (trip.tripType === GHOST_TYPE) typeClass = "type-ghost";
 
         return `
+                return `
         <div class="trip-detail-row">
           <div class="trip-detail-line1">
-            <span class="trip-detail-date">${trip.date}</span>
-            <span class="type-chip ${typeClass}">${trip.tripType}</span>
-            <span class="trip-detail-soc">🔋 ${trip.socStart}% → ${trip.socEnd}%</span>
+            <div class="trip-detail-line1-left">
+              <span class="trip-detail-date">${trip.date}</span>
+              <span class="type-chip ${typeClass}">${trip.tripType}</span>
+              <span class="trip-detail-soc">🔋 ${trip.socStart}% → ${trip.socEnd}%</span>
+            </div>
+            <button class="ghost trip-edit-btn" data-trip-id="${trip.id}" aria-label="Editar trayecto" title="Editar trayecto">✏️</button>
           </div>
           <div class="trip-detail-line2">
             <span>${formatKm(trip.kmTrip)}</span>
@@ -571,6 +614,14 @@ document.addEventListener("DOMContentLoaded", () => {
         const isHidden = target.classList.contains("hidden");
         target.classList.toggle("hidden");
         btn.textContent = isHidden ? "Ocultar detalle" : "Ver detalle";
+      });
+    });
+        historyListEl.querySelectorAll(".trip-edit-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const trip = trips.find(t => String(t.id) === String(btn.dataset.tripId));
+        if (!trip) return;
+        fillFormForEdit(trip);
+        openModal();
       });
     });
   }
@@ -825,14 +876,22 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     try {
-      await insertTripToSupabase(trip);
+      if (editingTripId) {
+        await updateTripInSupabase(editingTripId, trip);
+      } else {
+        await insertTripToSupabase(trip);
+      }
+
       trips = await fetchTripsFromSupabase();
       closeModal();
+      clearForm();
       renderAll();
-      showMsg("Trayecto guardado en Supabase.");
+      showMsg(editingTripId ? "Trayecto actualizado." : "Trayecto guardado en Supabase.");
     } catch (err) {
       console.error(err);
-      alert("No se pudo guardar el trayecto en Supabase.");
+      alert(editingTripId
+        ? "No se pudo actualizar el trayecto en Supabase."
+        : "No se pudo guardar el trayecto en Supabase.");
     }
   });
 
