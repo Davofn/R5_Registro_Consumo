@@ -195,7 +195,17 @@ document.addEventListener("DOMContentLoaded", () => {
       created_at: row.created_at ? new Date(row.created_at).getTime() : Date.now()
     };
   }
+async function deleteTripFromSupabase(id) {
+  const { error } = await supabase
+    .from("trips")
+    .delete()
+    .eq("id", id);
 
+  if (error) {
+    console.error("Error borrando trip en Supabase:", error);
+    throw error;
+  }
+}
 function tripToRow(entry) {
   return {
     trip_date: entry.date,
@@ -573,13 +583,28 @@ function summarizeStint(stint) {
         return `
   <div class="trip-detail-row">
     <div class="trip-detail-line1">
-      <div class="trip-detail-line1-left">
-        <span class="trip-detail-date">${trip.date}</span>
-        <span class="type-chip ${typeClass}">${trip.tripType}</span>
-        <span class="trip-detail-soc">🔋 ${trip.socStart}% → ${trip.socEnd}%</span>
-      </div>
-      <button class="ghost trip-edit-btn" data-trip-id="${trip.id}" aria-label="Editar trayecto" title="Editar trayecto">✏️</button>
-    </div>
+  <div class="trip-detail-line1-left">
+    <span class="trip-detail-date">${trip.date}</span>
+    <span class="type-chip ${typeClass}">${trip.tripType}</span>
+    <span class="trip-detail-soc">🔋 ${trip.socStart}% → ${trip.socEnd}%</span>
+  </div>
+
+  <div class="trip-detail-actions">
+    <button
+      class="ghost trip-edit-btn"
+      data-trip-id="${trip.id}"
+      aria-label="Editar trayecto"
+      title="Editar trayecto"
+    >✏️</button>
+
+    <button
+      class="ghost trip-delete-btn"
+      data-trip-id="${trip.id}"
+      aria-label="Eliminar trayecto"
+      title="Eliminar trayecto"
+    >🗑️</button>
+  </div>
+</div>
     <div class="trip-detail-line2">
       <span>${formatKm(trip.kmTrip)}</span>
       <span>${Number.isFinite(trip.avg) && trip.avg > 0 ? formatAvg(trip.avg) : "—"}<small>${Number.isFinite(trip.avg) && trip.avg > 0 ? "/100km" : ""}</small></span>
@@ -635,6 +660,29 @@ function summarizeStint(stint) {
         openModal();
       });
     });
+    historyListEl.querySelectorAll(".trip-delete-btn").forEach(btn => {
+  btn.addEventListener("click", async () => {
+    const trip = trips.find(t => String(t.id) === String(btn.dataset.tripId));
+    if (!trip) return;
+
+    const ok = confirm(
+      `¿Seguro que quieres eliminar este trayecto?\n\n` +
+      `${trip.date} · ${trip.tripType} · ${trip.socStart}% → ${trip.socEnd}%`
+    );
+
+    if (!ok) return;
+
+    try {
+      await deleteTripFromSupabase(trip.id);
+      trips = await fetchTripsFromSupabase();
+      renderAll();
+      showMsg("Trayecto eliminado.");
+    } catch (err) {
+      console.error(err);
+      alert("No se pudo eliminar el trayecto en Supabase.");
+    }
+  });
+});
   }
   function getWeightedAvg(arr) {
     const driving = getDrivingTrips(arr);
