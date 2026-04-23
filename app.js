@@ -84,7 +84,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const required = [
     tripModal, openTripModalBtn, closeTripModalBtn, closeTripModalBackdrop,
     toggleAdvancedBtn, advancedFields, saveTripBtn,
-    historyListEl, extrasInsightsEl, typeInsightsEl
+    historyListEl, monthlyInsightsEl, typeInsightsEl
   ];
 
   if (required.some(el => !el)) {
@@ -786,77 +786,100 @@ document.addEventListener("DOMContentLoaded", () => {
     const range = (BATTERY_KWH / avg) * 100;
     return `${Math.round(range)} km`;
   }
+function getMonthKeyFromDate(dateStr) {
+  const [d, m, y] = dateStr.split("/");
+  return `${y}-${m}`;
+}
 
+function formatMonthLabel(monthKey) {
+  const [year, month] = monthKey.split("-");
+  const monthNames = [
+    "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+    "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+  ];
+  return `${monthNames[Number(month) - 1]} ${year}`;
+}
   function renderInsights() {
-    const drivingTrips = getDrivingTrips(trips);
+  const drivingTrips = getDrivingTrips(trips);
 
-    const noExtras = drivingTrips.filter(t => t.climate !== "Sí" && t.seatsHeat !== "Sí");
-    const onlyClimate = drivingTrips.filter(t => t.climate === "Sí" && t.seatsHeat !== "Sí");
-    const onlySeats = drivingTrips.filter(t => t.climate !== "Sí" && t.seatsHeat === "Sí");
-    const bothExtras = drivingTrips.filter(t => t.climate === "Sí" && t.seatsHeat === "Sí");
+  // ===== BLOQUE 1: CONSUMO POR MES =====
+  const monthlyMap = new Map();
 
-    const avgNoExtras = getWeightedAvg(noExtras);
-    const avgClimate = getWeightedAvg(onlyClimate);
-    const avgSeats = getWeightedAvg(onlySeats);
-    const avgBoth = getWeightedAvg(bothExtras);
+  drivingTrips.forEach(trip => {
+    if (!trip.date) return;
 
-    function renderExtraLine(label, avgValue, baseValue) {
-      if (!Number.isFinite(avgValue)) {
-        return `<div class="stat-row"><span>${label}</span><strong>—</strong></div>`;
-      }
+    const monthKey = getMonthKeyFromDate(trip.date);
 
-      const suffix = label === "Sin extras" ? "" : ` <small>${formatDeltaPercent(baseValue, avgValue)}</small>`;
-      return `<div class="stat-row"><span>${label}</span><strong>${formatAvgCompact(avgValue)}${suffix}</strong></div>`;
+    if (!monthlyMap.has(monthKey)) {
+      monthlyMap.set(monthKey, {
+        km: 0,
+        kwh: 0
+      });
     }
 
-    extrasInsightsEl.innerHTML = `
-      ${renderExtraLine("Sin extras", avgNoExtras, avgNoExtras)}
-      ${renderExtraLine("Clima", avgClimate, avgNoExtras)}
-      ${renderExtraLine("Asientos", avgSeats, avgNoExtras)}
-      ${renderExtraLine("Clima + asientos", avgBoth, avgNoExtras)}
-    `;
+    const monthData = monthlyMap.get(monthKey);
+    monthData.km += Number(trip.kmTrip) || 0;
+    monthData.kwh += Number(trip.kwhUsed) || 0;
+  });
 
-    const byType = {
-      Ciudad: drivingTrips.filter(t => t.tripType === "Ciudad"),
-      Mixto: drivingTrips.filter(t => t.tripType === "Mixto"),
-      Autopista: drivingTrips.filter(t => t.tripType === "Autopista")
-    };
-
-    const totalDrivingKm = drivingTrips.reduce((sum, t) => sum + t.kmTrip, 0);
-
-    const typeStats = Object.entries(byType).map(([name, arr]) => {
-      const km = arr.reduce((sum, t) => sum + t.kmTrip, 0);
-      const avg = getWeightedAvg(arr);
-      const usagePct = totalDrivingKm > 0 ? (km / totalDrivingKm) * 100 : NaN;
-      return { name, km, avg, usagePct };
-    });
-
-    const validTypeStats = typeStats.filter(t => Number.isFinite(t.avg) && t.avg > 0);
-    const bestAvg = validTypeStats.length ? Math.min(...validTypeStats.map(t => t.avg)) : NaN;
-
-    function renderTypeLine(stat) {
-      if (!Number.isFinite(stat.avg) || stat.avg <= 0) {
-        return `<div class="stat-row"><span>${stat.name}</span><strong>—</strong></div>`;
-      }
-
-      const usageText = Number.isFinite(stat.usagePct) ? `${formatNumber(stat.usagePct, 0)}% uso` : "—";
-      const penaltyText = formatDeltaPercent(bestAvg, stat.avg);
-      const rangeText = formatRangeFromAvg(stat.avg);
-
+  const monthlyRows = Array.from(monthlyMap.entries())
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([monthKey, data]) => {
+      const avg = data.km > 0 ? safeAvg(data.kwh, data.km) : NaN;
       return `
         <div class="stat-row">
-          <span>${stat.name}</span>
-          <strong>${usageText} · ${penaltyText} · ${rangeText}</strong>
+          <span>${formatMonthLabel(monthKey)}</span>
+          <strong>${Number.isFinite(avg) ? formatAvgCompact(avg) : "—"} · ${formatKm(data.km)}</strong>
         </div>
       `;
+    });
+
+  monthlyInsightsEl.innerHTML = monthlyRows.length
+    ? monthlyRows.join("")
+    : `<div class="stat-row"><span>Sin datos</span><strong>—</strong></div>`;
+
+  // ===== BLOQUE 2: USO Y EFICIENCIA POR TIPO =====
+  const byType = {
+    Ciudad: drivingTrips.filter(t => t.tripType === "Ciudad"),
+    Mixto: drivingTrips.filter(t => t.tripType === "Mixto"),
+    Autopista: drivingTrips.filter(t => t.tripType === "Autopista")
+  };
+
+  const totalDrivingKm = drivingTrips.reduce((sum, t) => sum + t.kmTrip, 0);
+
+  const typeStats = Object.entries(byType).map(([name, arr]) => {
+    const km = arr.reduce((sum, t) => sum + t.kmTrip, 0);
+    const avg = getWeightedAvg(arr);
+    const usagePct = totalDrivingKm > 0 ? (km / totalDrivingKm) * 100 : NaN;
+    return { name, km, avg, usagePct };
+  });
+
+  const validTypeStats = typeStats.filter(t => Number.isFinite(t.avg) && t.avg > 0);
+  const bestAvg = validTypeStats.length ? Math.min(...validTypeStats.map(t => t.avg)) : NaN;
+
+  function renderTypeLine(stat) {
+    if (!Number.isFinite(stat.avg) || stat.avg <= 0) {
+      return `<div class="stat-row"><span>${stat.name}</span><strong>—</strong></div>`;
     }
 
-    typeInsightsEl.innerHTML = `
-      ${renderTypeLine(typeStats.find(t => t.name === "Ciudad"))}
-      ${renderTypeLine(typeStats.find(t => t.name === "Mixto"))}
-      ${renderTypeLine(typeStats.find(t => t.name === "Autopista"))}
+    const usageText = Number.isFinite(stat.usagePct) ? `${formatNumber(stat.usagePct, 0)}% uso` : "—";
+    const penaltyText = formatDeltaPercent(bestAvg, stat.avg);
+    const rangeText = formatRangeFromAvg(stat.avg);
+
+    return `
+      <div class="stat-row">
+        <span>${stat.name}</span>
+        <strong>${usageText} · ${penaltyText} · ${rangeText}</strong>
+      </div>
     `;
   }
+
+  typeInsightsEl.innerHTML = `
+    ${renderTypeLine(typeStats.find(t => t.name === "Ciudad"))}
+    ${renderTypeLine(typeStats.find(t => t.name === "Mixto"))}
+    ${renderTypeLine(typeStats.find(t => t.name === "Autopista"))}
+  `;
+}
 
   function renderAll() {
     renderHero();
