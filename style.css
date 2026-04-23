@@ -1128,3 +1128,15 @@ select:focus{
     align-items: start;
   }
 }
+.trip-detail-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.trip-delete-btn,
+.trip-edit-btn {
+  min-width: 42px;
+  padding: 8px 10px;
+  line-height: 1;
+}
