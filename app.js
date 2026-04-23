@@ -196,26 +196,26 @@ document.addEventListener("DOMContentLoaded", () => {
     };
   }
 
-  function tripToRow(entry) {
-    return {
-      trip_date: entry.date,
-      trip_type: entry.tripType,
-      climate: entry.climate || "No",
-      seats_heat: entry.seatsHeat || "No",
-      km_start: entry.kmStart,
-      km_end: entry.kmEnd,
-      km_trip: entry.kmTrip,
-      soc_start: entry.socStart,
-      soc_end: entry.socEnd,
-      soc_used: entry.socUsed,
-      kwh_used: entry.kwhUsed,
-      avg: Number.isFinite(entry.avg) ? entry.avg : null,
-      external: entry.external || false,
-      price: entry.price ?? DEFAULT_HOME_PRICE,
-      cost: entry.cost ?? 0,
-      notes: entry.notes || ""
-    };
-  }
+function tripToRow(entry) {
+  return {
+    trip_date: entry.date,
+    trip_type: entry.tripType,
+    climate: entry.climate || "No",
+    seats_heat: entry.seatsHeat || "No",
+    km_start: entry.kmStart,
+    km_end: entry.kmEnd,
+    km_trip: entry.kmTrip,
+    soc_start: entry.socStart,
+    soc_end: entry.socEnd,
+    soc_used: entry.socUsed,
+    kwh_used: entry.kwhUsed,
+    avg: Number.isFinite(entry.avg) ? entry.avg : 0,
+    external: entry.external || false,
+    price: entry.price ?? DEFAULT_HOME_PRICE,
+    cost: entry.cost ?? 0,
+    notes: entry.notes || ""
+  };
+}
 
   async function fetchTripsFromSupabase() {
     const { data, error } = await supabase
