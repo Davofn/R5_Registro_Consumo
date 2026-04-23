@@ -1140,3 +1140,100 @@ select:focus{
   padding: 8px 10px;
   line-height: 1;
 }
+.hero-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.metric-card {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.metric-card span,
+.metric-card strong {
+  text-align: center;
+}
+
+@media (max-width: 768px) {
+  .hero-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.insights-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+
+@media (min-width: 900px) {
+  .insights-grid {
+    grid-template-columns: 1fr 1fr;
+    align-items: start;
+  }
+}
+
+#extrasInsights small,
+#typeInsights small {
+  color: rgba(255,255,255,.6);
+  font-weight: 500;
+  margin-left: 6px;
+}
+
+.stint-meta {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.45);
+  letter-spacing: 0.2px;
+}
+
+.type-ghost {
+  background: rgba(139, 92, 246, 0.18);
+  color: #c4b5fd;
+  border: 1px solid rgba(139, 92, 246, 0.35);
+}
+
+.trip-detail-line1 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.trip-detail-line1-left {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.trip-detail-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.trip-delete-btn,
+.trip-edit-btn {
+  min-width: 42px;
+  padding: 8px 10px;
+  line-height: 1;
+}
+
+.current-stint-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 12px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  color: #111827;
+  background: #ffd400;
+}
