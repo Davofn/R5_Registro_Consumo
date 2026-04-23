@@ -40,19 +40,19 @@
 
       <div class="hero-metrics">
         <article class="metric-card featured">
-          <span>Consumo medio/100 km</span>
+          <span>Consumo medio</span>
           <strong id="globalAvg">—</strong>
         </article>
         <article class="metric-card">
-          <span>Autonomía estimada</span>
+          <span>Autonomía</span>
           <strong id="realRange">—</strong>
         </article>
         <article class="metric-card">
-          <span>Coste / 100 km</span>
+          <span>Coste</span>
           <strong id="costPer100">—</strong>
         </article>
         <article class="metric-card">
-          <span>Total km</span>
+          <span>Km totales</span>
           <strong id="totalKm">—</strong>
         </article>
       </div>
@@ -144,32 +144,33 @@
         <div id="historyList" class="history-list"></div>
       </section>
 
-<section class="tab-panel" id="tab-insights" role="tabpanel">
-  <div class="summary-grid insights-grid">
-    <article class="panel-card">
-      <div class="panel-head">
-        <h3>Impacto de extras</h3>
-      </div>
-      <div id="extrasInsights" class="stats-list">
-        <div class="stat-row"><span>Sin extras</span><strong>—</strong></div>
-        <div class="stat-row"><span>Clima</span><strong>—</strong></div>
-        <div class="stat-row"><span>Asientos</span><strong>—</strong></div>
-        <div class="stat-row"><span>Clima + asientos</span><strong>—</strong></div>
-      </div>
-    </article>
+      <section class="tab-panel" id="tab-insights" role="tabpanel">
+        <div class="summary-grid insights-grid">
+          <article class="panel-card">
+            <div class="panel-head">
+              <h3>Impacto de extras</h3>
+            </div>
+            <div id="extrasInsights" class="stats-list">
+              <div class="stat-row"><span>Sin extras</span><strong>—</strong></div>
+              <div class="stat-row"><span>Clima</span><strong>—</strong></div>
+              <div class="stat-row"><span>Asientos</span><strong>—</strong></div>
+              <div class="stat-row"><span>Clima + asientos</span><strong>—</strong></div>
+            </div>
+          </article>
 
-    <article class="panel-card">
-      <div class="panel-head">
-        <h3>Uso, eficiencia por tipo y autonomía</h3>
-      </div>
-      <div id="typeInsights" class="stats-list">
-        <div class="stat-row"><span>Ciudad</span><strong>—</strong></div>
-        <div class="stat-row"><span>Mixto</span><strong>—</strong></div>
-        <div class="stat-row"><span>Autopista</span><strong>—</strong></div>
-      </div>
-    </article>
-  </div>
-</section>
+          <article class="panel-card">
+            <div class="panel-head">
+              <h3>Uso y eficiencia por tipo</h3>
+            </div>
+            <div id="typeInsights" class="stats-list">
+              <div class="stat-row"><span>Ciudad</span><strong>—</strong></div>
+              <div class="stat-row"><span>Mixto</span><strong>—</strong></div>
+              <div class="stat-row"><span>Autopista</span><strong>—</strong></div>
+            </div>
+          </article>
+        </div>
+      </section>
+    </section>
 
     <p class="hint" id="msg" aria-live="polite"></p>
   </main>
@@ -287,10 +288,9 @@
   </div>
 
   <footer class="footer">
-    <small>v3.4 · Davo</small>
+    <small>v3.4.1 · Davo</small>
   </footer>
 
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script type="module" src="app.js"></script>
 </body>
 </html>
