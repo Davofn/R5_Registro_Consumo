@@ -76,13 +76,13 @@ document.addEventListener("DOMContentLoaded", () => {
   // INSIGHTS
   const extrasInsightsEl = document.getElementById("extrasInsights");
   const typeInsightsEl = document.getElementById("typeInsights");
-  
+
   // TABS
   const tabs = document.querySelectorAll(".tab");
   const panels = document.querySelectorAll(".tab-panel");
 
   const required = [
-     tripModal, openTripModalBtn, closeTripModalBtn, closeTripModalBackdrop,
+    tripModal, openTripModalBtn, closeTripModalBtn, closeTripModalBackdrop,
     toggleAdvancedBtn, advancedFields, saveTripBtn,
     historyListEl, extrasInsightsEl, typeInsightsEl
   ];
@@ -90,10 +90,6 @@ document.addEventListener("DOMContentLoaded", () => {
   if (required.some(el => !el)) {
     console.error("Faltan elementos del DOM. Revisa IDs del HTML.");
     return;
-  }
-
-  function $(id) {
-    return document.getElementById(id);
   }
 
   function showMsg(text) {
@@ -117,6 +113,10 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function formatAvg(value) {
+    return `${formatNumber(value, 1)} kWh/100 km`;
+  }
+
+  function formatAvgCompact(value) {
     return `${formatNumber(value, 1)} kWh`;
   }
 
@@ -166,7 +166,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const db = sortDateValue(b.date);
     if (da !== db) return da - db;
 
-    // Dentro del mismo día: primero mayor SOC inicial
     if (a.socStart !== b.socStart) return b.socStart - a.socStart;
 
     return a.created_at - b.created_at;
@@ -195,37 +194,27 @@ document.addEventListener("DOMContentLoaded", () => {
       created_at: row.created_at ? new Date(row.created_at).getTime() : Date.now()
     };
   }
-async function deleteTripFromSupabase(id) {
-  const { error } = await supabase
-    .from("trips")
-    .delete()
-    .eq("id", id);
 
-  if (error) {
-    console.error("Error borrando trip en Supabase:", error);
-    throw error;
+  function tripToRow(entry) {
+    return {
+      trip_date: entry.date,
+      trip_type: entry.tripType,
+      climate: entry.climate || "No",
+      seats_heat: entry.seatsHeat || "No",
+      km_start: entry.kmStart,
+      km_end: entry.kmEnd,
+      km_trip: entry.kmTrip,
+      soc_start: entry.socStart,
+      soc_end: entry.socEnd,
+      soc_used: entry.socUsed,
+      kwh_used: entry.kwhUsed,
+      avg: Number.isFinite(entry.avg) ? entry.avg : 0,
+      external: entry.external || false,
+      price: entry.price ?? DEFAULT_HOME_PRICE,
+      cost: entry.cost ?? 0,
+      notes: entry.notes || ""
+    };
   }
-}
-function tripToRow(entry) {
-  return {
-    trip_date: entry.date,
-    trip_type: entry.tripType,
-    climate: entry.climate || "No",
-    seats_heat: entry.seatsHeat || "No",
-    km_start: entry.kmStart,
-    km_end: entry.kmEnd,
-    km_trip: entry.kmTrip,
-    soc_start: entry.socStart,
-    soc_end: entry.socEnd,
-    soc_used: entry.socUsed,
-    kwh_used: entry.kwhUsed,
-    avg: Number.isFinite(entry.avg) ? entry.avg : 0,
-    external: entry.external || false,
-    price: entry.price ?? DEFAULT_HOME_PRICE,
-    cost: entry.cost ?? 0,
-    notes: entry.notes || ""
-  };
-}
 
   async function fetchTripsFromSupabase() {
     const { data, error } = await supabase
@@ -261,6 +250,18 @@ function tripToRow(entry) {
 
     if (error) {
       console.error("Error actualizando trip en Supabase:", error);
+      throw error;
+    }
+  }
+
+  async function deleteTripFromSupabase(id) {
+    const { error } = await supabase
+      .from("trips")
+      .delete()
+      .eq("id", id);
+
+    if (error) {
+      console.error("Error borrando trip en Supabase:", error);
       throw error;
     }
   }
@@ -444,38 +445,38 @@ function tripToRow(entry) {
     return stints;
   }
 
-function summarizeStint(stint) {
-  const drivingTrips = getDrivingTrips(stint);
+  function summarizeStint(stint) {
+    const drivingTrips = getDrivingTrips(stint);
 
-  const totalKm = stint.reduce((sum, t) => sum + t.kmTrip, 0);
-  const totalKwh = stint.reduce((sum, t) => sum + t.kwhUsed, 0);
-  const totalCost = stint.reduce((sum, t) => sum + t.cost, 0);
+    const totalKm = stint.reduce((sum, t) => sum + t.kmTrip, 0);
+    const totalKwh = stint.reduce((sum, t) => sum + t.kwhUsed, 0);
+    const totalCost = stint.reduce((sum, t) => sum + t.cost, 0);
 
-  const totalDrivingKm = drivingTrips.reduce((sum, t) => sum + t.kmTrip, 0);
-  const totalDrivingKwh = drivingTrips.reduce((sum, t) => sum + t.kwhUsed, 0);
+    const totalDrivingKm = drivingTrips.reduce((sum, t) => sum + t.kmTrip, 0);
+    const totalDrivingKwh = drivingTrips.reduce((sum, t) => sum + t.kwhUsed, 0);
 
-  const socStart = stint[0].socStart;
-  const socEnd = stint[stint.length - 1].socEnd;
-  const socUsed = socStart - socEnd;
-  const avg = safeAvg(totalDrivingKwh, totalDrivingKm);
+    const socStart = stint[0].socStart;
+    const socEnd = stint[stint.length - 1].socEnd;
+    const socUsed = socStart - socEnd;
+    const avg = safeAvg(totalDrivingKwh, totalDrivingKm);
 
-  const startDate = stint[0].date;
-  const endDate = stint[stint.length - 1].date;
+    const startDate = stint[0].date;
+    const endDate = stint[stint.length - 1].date;
 
-  return {
-    count: stint.length,
-    totalKm,
-    totalKwh,
-    totalCost,
-    socStart,
-    socEnd,
-    socUsed,
-    avg,
-    startDate,
-    endDate,
-    trips: stint
-  };
-}
+    return {
+      count: stint.length,
+      totalKm,
+      totalKwh,
+      totalCost,
+      socStart,
+      socEnd,
+      socUsed,
+      avg,
+      startDate,
+      endDate,
+      trips: stint
+    };
+  }
 
   function renderHero() {
     const drivingTrips = getDrivingTrips(trips);
@@ -490,7 +491,7 @@ function summarizeStint(stint) {
     const costPer100 = totalKm > 0 ? (totalCost / totalKm) * 100 : 0;
 
     odoNowEl.textContent = trips.length ? `${formatNumber(lastOdo, 1)} km` : "—";
-    globalAvgEl.textContent = totalKm > 0 ? formatAvg(avg) : "—";
+    globalAvgEl.textContent = totalKm > 0 ? formatAvgCompact(avg) : "—";
     realRangeEl.textContent = totalKm > 0 ? `${Math.round(range)} km` : "—";
     costPer100El.textContent = totalKm > 0 ? formatEuro(costPer100) : "—";
     totalKmEl.textContent = totalKm > 0 ? formatKm(totalKm) : "—";
@@ -553,58 +554,47 @@ function summarizeStint(stint) {
     return typeOk && extrasOk;
   }
 
-  function renderHistory() {
-    historyListEl.innerHTML = "";
+  function renderStintCard(stint, idx, isCurrent = false) {
+    const summary = summarizeStint(stint);
+    const card = document.createElement("article");
+    card.className = "stint-card panel-card";
 
-    const filtered = trips.filter(passesFilters);
-    const stints = buildStints(filtered);
+    const detailsId = `stint-details-${isCurrent ? "current" : idx}`;
 
-    if (!stints.length) {
-      historyListEl.innerHTML = `<div class="panel-card">No hay trayectos para mostrar.</div>`;
-      return;
-    }
+    const detailRows = summary.trips.map(trip => {
+      const climaIcon = trip.climate === "Sí" ? "❄️" : "—";
+      const asientosIcon = trip.seatsHeat === "Sí" ? "🔥" : "—";
 
-    stints.reverse().forEach((stint, idx) => {
-      const summary = summarizeStint(stint);
-      const card = document.createElement("article");
-      card.className = "stint-card panel-card";
+      let typeClass = "type-highway";
+      if (trip.tripType === "Ciudad") typeClass = "type-city";
+      if (trip.tripType === "Mixto") typeClass = "type-mixed";
+      if (trip.tripType === GHOST_TYPE) typeClass = "type-ghost";
 
-      const detailsId = `stint-details-${idx}`;
-
-      const detailRows = summary.trips.map(trip => {
-        const climaIcon = trip.climate === "Sí" ? "❄️" : "—";
-        const asientosIcon = trip.seatsHeat === "Sí" ? "🔥" : "—";
-
-        let typeClass = "type-highway";
-        if (trip.tripType === "Ciudad") typeClass = "type-city";
-        if (trip.tripType === "Mixto") typeClass = "type-mixed";
-        if (trip.tripType === GHOST_TYPE) typeClass = "type-ghost";
-
-        return `
+      return `
   <div class="trip-detail-row">
     <div class="trip-detail-line1">
-  <div class="trip-detail-line1-left">
-    <span class="trip-detail-date">${trip.date}</span>
-    <span class="type-chip ${typeClass}">${trip.tripType}</span>
-    <span class="trip-detail-soc">🔋 ${trip.socStart}% → ${trip.socEnd}%</span>
-  </div>
+      <div class="trip-detail-line1-left">
+        <span class="trip-detail-date">${trip.date}</span>
+        <span class="type-chip ${typeClass}">${trip.tripType}</span>
+        <span class="trip-detail-soc">🔋 ${trip.socStart}% → ${trip.socEnd}%</span>
+      </div>
 
-  <div class="trip-detail-actions">
-    <button
-      class="ghost trip-edit-btn"
-      data-trip-id="${trip.id}"
-      aria-label="Editar trayecto"
-      title="Editar trayecto"
-    >✏️</button>
+      <div class="trip-detail-actions">
+        <button
+          class="ghost trip-edit-btn"
+          data-trip-id="${trip.id}"
+          aria-label="Editar trayecto"
+          title="Editar trayecto"
+        >✏️</button>
 
-    <button
-      class="ghost trip-delete-btn"
-      data-trip-id="${trip.id}"
-      aria-label="Eliminar trayecto"
-      title="Eliminar trayecto"
-    >🗑️</button>
-  </div>
-</div>
+        <button
+          class="ghost trip-delete-btn"
+          data-trip-id="${trip.id}"
+          aria-label="Eliminar trayecto"
+          title="Eliminar trayecto"
+        >🗑️</button>
+      </div>
+    </div>
     <div class="trip-detail-line2">
       <span>${formatKm(trip.kmTrip)}</span>
       <span>${Number.isFinite(trip.avg) && trip.avg > 0 ? formatAvg(trip.avg) : "—"}<small>${Number.isFinite(trip.avg) && trip.avg > 0 ? "/100km" : ""}</small></span>
@@ -615,32 +605,32 @@ function summarizeStint(stint) {
     ${trip.notes ? `<div class="trip-detail-notes">${trip.notes}</div>` : ""}
   </div>
 `;
-      }).join("");
+    }).join("");
 
-      card.innerHTML = `
-        <div class="stint-summary">
-          <div class="stint-main">
-            <div class="stint-title">🔋 ${summary.socStart}% → ${summary.socEnd}%</div>
-            <div class="stint-sub">
-              ${formatKm(summary.totalKm)} · ${summary.avg > 0 ? formatAvg(summary.avg) : "—"} · ${formatEuro(summary.totalCost)}
-            </div>
-            <div class="stint-meta">
-  ${summary.count} trayectos ·
-  ${summary.startDate === summary.endDate
-    ? summary.startDate
-    : `${summary.startDate} - ${summary.endDate}`}
-</div>
+    const dateRange = summary.startDate === summary.endDate
+      ? summary.startDate
+      : `${summary.startDate} - ${summary.endDate}`;
+
+    card.innerHTML = `
+      <div class="stint-summary">
+        <div class="stint-main">
+          <div class="stint-title">${isCurrent ? `<span class="current-stint-badge">Actual</span>` : ""}${summary.socStart}% → ${summary.socEnd}%</div>
+          <div class="stint-sub">
+            ${formatKm(summary.totalKm)} · ${summary.avg > 0 ? formatAvg(summary.avg) : "—"} · ${formatEuro(summary.totalCost)}
           </div>
-          <button class="ghost toggle-details" data-target="${detailsId}">Ver detalle</button>
+          <div class="stint-meta">${summary.count} trayectos · ${dateRange}</div>
         </div>
-        <div id="${detailsId}" class="stint-details hidden">
-          ${detailRows}
-        </div>
-      `;
+        <button class="ghost toggle-details" data-target="${detailsId}">Ver detalle</button>
+      </div>
+      <div id="${detailsId}" class="stint-details hidden">
+        ${detailRows}
+      </div>
+    `;
 
-      historyListEl.appendChild(card);
-    });
+    return card;
+  }
 
+  function wireHistoryActionButtons() {
     historyListEl.querySelectorAll(".toggle-details").forEach(btn => {
       btn.addEventListener("click", () => {
         const target = document.getElementById(btn.dataset.target);
@@ -660,30 +650,60 @@ function summarizeStint(stint) {
         openModal();
       });
     });
+
     historyListEl.querySelectorAll(".trip-delete-btn").forEach(btn => {
-  btn.addEventListener("click", async () => {
-    const trip = trips.find(t => String(t.id) === String(btn.dataset.tripId));
-    if (!trip) return;
+      btn.addEventListener("click", async () => {
+        const trip = trips.find(t => String(t.id) === String(btn.dataset.tripId));
+        if (!trip) return;
 
-    const ok = confirm(
-      `¿Seguro que quieres eliminar este trayecto?\n\n` +
-      `${trip.date} · ${trip.tripType} · ${trip.socStart}% → ${trip.socEnd}%`
-    );
+        const ok = confirm(
+          `¿Seguro que quieres eliminar este trayecto?\n\n` +
+          `${trip.date} · ${trip.tripType} · ${trip.socStart}% → ${trip.socEnd}%`
+        );
 
-    if (!ok) return;
+        if (!ok) return;
 
-    try {
-      await deleteTripFromSupabase(trip.id);
-      trips = await fetchTripsFromSupabase();
-      renderAll();
-      showMsg("Trayecto eliminado.");
-    } catch (err) {
-      console.error(err);
-      alert("No se pudo eliminar el trayecto en Supabase.");
-    }
-  });
-});
+        try {
+          await deleteTripFromSupabase(trip.id);
+          trips = await fetchTripsFromSupabase();
+          renderAll();
+          showMsg("Trayecto eliminado.");
+        } catch (err) {
+          console.error(err);
+          alert("No se pudo eliminar el trayecto en Supabase.");
+        }
+      });
+    });
   }
+
+  function renderHistory() {
+    historyListEl.innerHTML = "";
+
+    const filtered = trips.filter(passesFilters);
+    const stints = buildStints(filtered);
+
+    if (!stints.length) {
+      historyListEl.innerHTML = `<div class="panel-card">No hay trayectos para mostrar.</div>`;
+      return;
+    }
+
+    // El último stint es el ciclo actual
+    const currentStint = stints[stints.length - 1];
+    const closedStints = stints.slice(0, -1).reverse();
+
+    if (currentStint?.length) {
+      const currentCard = renderStintCard(currentStint, "current", true);
+      historyListEl.appendChild(currentCard);
+    }
+
+    closedStints.forEach((stint, idx) => {
+      const card = renderStintCard(stint, idx, false);
+      historyListEl.appendChild(card);
+    });
+
+    wireHistoryActionButtons();
+  }
+
   function getWeightedAvg(arr) {
     const driving = getDrivingTrips(arr);
     const km = driving.reduce((sum, t) => sum + t.kmTrip, 0);
@@ -707,7 +727,6 @@ function summarizeStint(stint) {
   function renderInsights() {
     const drivingTrips = getDrivingTrips(trips);
 
-    // ===== BLOQUE 1: IMPACTO EXTRAS =====
     const noExtras = drivingTrips.filter(t => t.climate !== "Sí" && t.seatsHeat !== "Sí");
     const onlyClimate = drivingTrips.filter(t => t.climate === "Sí" && t.seatsHeat !== "Sí");
     const onlySeats = drivingTrips.filter(t => t.climate !== "Sí" && t.seatsHeat === "Sí");
@@ -724,7 +743,7 @@ function summarizeStint(stint) {
       }
 
       const suffix = label === "Sin extras" ? "" : ` <small>${formatDeltaPercent(baseValue, avgValue)}</small>`;
-      return `<div class="stat-row"><span>${label}</span><strong>${formatAvg(avgValue)}${suffix}</strong></div>`;
+      return `<div class="stat-row"><span>${label}</span><strong>${formatAvgCompact(avgValue)}${suffix}</strong></div>`;
     }
 
     extrasInsightsEl.innerHTML = `
@@ -734,7 +753,6 @@ function summarizeStint(stint) {
       ${renderExtraLine("Clima + asientos", avgBoth, avgNoExtras)}
     `;
 
-    // ===== BLOQUE 2: USO Y EFICIENCIA POR TIPO =====
     const byType = {
       Ciudad: drivingTrips.filter(t => t.tripType === "Ciudad"),
       Mixto: drivingTrips.filter(t => t.tripType === "Mixto"),
@@ -776,7 +794,7 @@ function summarizeStint(stint) {
       ${renderTypeLine(typeStats.find(t => t.name === "Autopista"))}
     `;
   }
-  
+
   function renderAll() {
     renderHero();
     renderSummary();
