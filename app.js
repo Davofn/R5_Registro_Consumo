@@ -70,22 +70,22 @@ document.addEventListener("DOMContentLoaded", () => {
   const csvFileEl = document.getElementById("csvFile");
   const replaceOnImportEl = document.getElementById("replaceOnImport");
 
-  // MSG
-  const msgEl = document.getElementById("msg");
+ // MSG
+const msgEl = document.getElementById("msg");
 
-  // INSIGHTS
-  cconst monthlyInsightsEl = document.getElementById("monthlyInsights");
-  const typeInsightsEl = document.getElementById("typeInsights");
+// INSIGHTS
+const monthlyInsightsEl = document.getElementById("monthlyInsights");
+const typeInsightsEl = document.getElementById("typeInsights");
 
   // TABS
   const tabs = document.querySelectorAll(".tab");
   const panels = document.querySelectorAll(".tab-panel");
 
-  const required = [
-    tripModal, openTripModalBtn, closeTripModalBtn, closeTripModalBackdrop,
-    toggleAdvancedBtn, advancedFields, saveTripBtn,
-    historyListEl, monthlyInsightsEl, typeInsightsEl
-  ];
+ const required = [
+  tripModal, openTripModalBtn, closeTripModalBtn, closeTripModalBackdrop,
+  toggleAdvancedBtn, advancedFields, saveTripBtn,
+  historyListEl, monthlyInsightsEl, typeInsightsEl
+];
 
   if (required.some(el => !el)) {
     console.error("Faltan elementos del DOM. Revisa IDs del HTML.");
