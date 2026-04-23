@@ -74,7 +74,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const msgEl = document.getElementById("msg");
 
   // INSIGHTS
-  const extrasInsightsEl = document.getElementById("extrasInsights");
+  cconst monthlyInsightsEl = document.getElementById("monthlyInsights");
   const typeInsightsEl = document.getElementById("typeInsights");
 
   // TABS
