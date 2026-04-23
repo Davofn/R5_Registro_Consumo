@@ -478,6 +478,70 @@ document.addEventListener("DOMContentLoaded", () => {
     };
   }
 
+  function getComparableTrips() {
+    return trips.filter(t => String(t.id) !== String(editingTripId)).sort(sortTrips);
+  }
+
+  function getCandidateCreatedAt() {
+    if (!editingTripId) return Date.now();
+    const current = trips.find(t => String(t.id) === String(editingTripId));
+    return current?.created_at ?? Date.now();
+  }
+
+  function findPreviousTripForCandidate(candidate) {
+    const comparable = getComparableTrips();
+    const combined = [...comparable, candidate].sort(sortTrips);
+    const idx = combined.findIndex(t => String(t.id) === "__candidate__");
+    if (idx <= 0) return null;
+    return combined[idx - 1];
+  }
+
+  function analyzeTripConsistency(candidate) {
+    const warnings = [];
+    const prev = findPreviousTripForCandidate(candidate);
+
+    if (candidate.tripType === GHOST_TYPE && candidate.kmStart !== candidate.kmEnd) {
+      warnings.push("Consumo fantasma debería tener Km inicio y Km fin iguales.");
+    }
+
+    if (!candidate.tripType || !Number.isFinite(candidate.kmStart) || !Number.isFinite(candidate.kmEnd)) {
+      return warnings;
+    }
+
+    if (prev) {
+      if (Math.abs(candidate.kmStart - prev.kmEnd) > 0.05) {
+        warnings.push(
+          `El Km inicio (${formatNumber(candidate.kmStart, 1)}) no coincide con el odómetro anterior (${formatNumber(prev.kmEnd, 1)}).`
+        );
+      }
+
+      if (candidate.socStart < prev.socEnd) {
+        warnings.push(
+          `La batería inicial (${candidate.socStart}%) es menor que la final del trayecto anterior (${prev.socEnd}%). Puede faltar un consumo fantasma o haber un dato incorrecto.`
+        );
+      } else if (candidate.socStart > prev.socEnd) {
+        warnings.push(
+          `La batería inicial (${candidate.socStart}%) es mayor que la final del trayecto anterior (${prev.socEnd}%). Parece que hubo una recarga entre ambos trayectos.`
+        );
+      }
+    }
+
+    if (candidate.tripType !== GHOST_TYPE && Number.isFinite(candidate.avg)) {
+      if (candidate.avg > 35) {
+        warnings.push(`Consumo muy alto (${formatNumber(candidate.avg, 1)} kWh/100 km). Revisa si el trayecto o los porcentajes son correctos.`);
+      }
+      if (candidate.avg > 0 && candidate.avg < 5) {
+        warnings.push(`Consumo muy bajo (${formatNumber(candidate.avg, 1)} kWh/100 km). Puede haber algún dato mal introducido.`);
+      }
+    }
+
+    if (candidate.tripType === GHOST_TYPE && candidate.socUsed > 15) {
+      warnings.push(`Consumo fantasma alto (${candidate.socUsed}%). Comprueba que los porcentajes sean correctos.`);
+    }
+
+    return warnings;
+  }
+
   function renderHero() {
     const drivingTrips = getDrivingTrips(trips);
 
@@ -687,7 +751,6 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    // El último stint es el ciclo actual
     const currentStint = stints[stints.length - 1];
     const closedStints = stints.slice(0, -1).reverse();
 
@@ -849,8 +912,16 @@ document.addEventListener("DOMContentLoaded", () => {
       alert("Introduce el km inicio.");
       return;
     }
+    if (!isGhost && !Number.isFinite(kmEnd)) {
+      alert("Introduce el km fin.");
+      return;
+    }
     if (!isGhost && kmEnd <= kmStart) {
       alert("El km fin debe ser mayor que el km inicio.");
+      return;
+    }
+    if (isGhost && kmEnd !== kmStart) {
+      alert("En Consumo fantasma, Km inicio y Km fin deben ser iguales.");
       return;
     }
     if (socStart <= socEnd) {
@@ -858,7 +929,10 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
+    const currentCreatedAt = getCandidateCreatedAt();
+
     const trip = {
+      id: "__candidate__",
       date: toDbDate(dateEl.value),
       tripType: tripTypeEl.value,
       kmStart,
@@ -875,16 +949,29 @@ document.addEventListener("DOMContentLoaded", () => {
       climate: climateEl.value,
       seatsHeat: seatsHeatEl.value,
       notes: notesEl.value.trim(),
-      created_at: Date.now()
+      created_at: currentCreatedAt
     };
+
+    const warnings = analyzeTripConsistency(trip);
+
+    if (warnings.length) {
+      const ok = confirm(
+        `Se han detectado posibles incoherencias:\n\n` +
+        warnings.map(w => `- ${w}`).join("\n") +
+        `\n\n¿Quieres guardar de todos modos?`
+      );
+      if (!ok) return;
+    }
 
     try {
       const wasEditing = !!editingTripId;
+      const rowTrip = { ...trip };
+      delete rowTrip.id;
 
       if (editingTripId) {
-        await updateTripInSupabase(editingTripId, trip);
+        await updateTripInSupabase(editingTripId, rowTrip);
       } else {
-        await insertTripToSupabase(trip);
+        await insertTripToSupabase(rowTrip);
       }
 
       trips = await fetchTripsFromSupabase();
