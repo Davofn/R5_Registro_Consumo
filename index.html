@@ -135,29 +135,37 @@
         <div id="historyList" class="history-list"></div>
       </section>
 
-      <section class="tab-panel" id="tab-insights" role="tabpanel">
-        <div class="summary-grid insights-grid">
-          <article class="panel-card">
-            <div class="panel-head">
-              <h3>Consumo por mes</h3>
-            </div>
-            <div id="monthlyInsights" class="stats-list">
-              <div class="stat-row"><span>—</span><strong>—</strong></div>
-            </div>
-          </article>
+    <article class="panel-card">
+  <div class="panel-head">
+    <h3>Consumo por mes</h3>
+  </div>
+  <div id="monthlyInsights" class="stats-list">
+    <div class="stat-row"><span>—</span><strong>—</strong></div>
+  </div>
+</article>
 
-          <article class="panel-card">
-            <div class="panel-head">
-              <h3>Uso, eficiencia y autonomía</h3>
-            </div>
-            <div id="typeInsights" class="stats-list">
-              <div class="stat-row"><span>Ciudad</span><strong>—</strong></div>
-              <div class="stat-row"><span>Mixto</span><strong>—</strong></div>
-              <div class="stat-row"><span>Autopista</span><strong>—</strong></div>
-            </div>
-          </article>
-        </div>
-      </section>
+<article class="panel-card">
+  <div class="panel-head">
+    <h3>Uso, eficiencia y autonomía</h3>
+  </div>
+  <div id="typeInsights" class="stats-list">
+    <div class="stat-row"><span>Ciudad</span><strong>—</strong></div>
+    <div class="stat-row"><span>Mixto</span><strong>—</strong></div>
+    <div class="stat-row"><span>Autopista</span><strong>—</strong></div>
+  </div>
+</article>
+
+<article class="panel-card">
+  <div class="panel-head">
+    <h3>Frecuencia de carga media</h3>
+  </div>
+  <div class="stats-list">
+    <div class="stat-row"><span>Recargas en casa</span><strong id="homeSessions">—</strong></div>
+    <div class="stat-row"><span>Media casa</span><strong id="homeAvgDays">—</strong></div>
+    <div class="stat-row"><span>Recargas fuera</span><strong id="awaySessions">—</strong></div>
+    <div class="stat-row"><span>Media fuera</span><strong id="awayAvgDays">—</strong></div>
+  </div>
+</article>
 
       <section class="tab-panel" id="tab-costs" role="tabpanel">
         <div class="summary-grid costs-grid">
@@ -200,18 +208,7 @@
             </div>
           </article>
 
-          <article class="panel-card">
-            <div class="panel-head">
-              <h3>Frecuencia inferida</h3>
-            </div>
-            <div class="stats-list">
-              <div class="stat-row"><span>Recargas en casa</span><strong id="homeSessions">—</strong></div>
-              <div class="stat-row"><span>Media casa</span><strong id="homeAvgDays">—</strong></div>
-              <div class="stat-row"><span>Recargas fuera</span><strong id="awaySessions">—</strong></div>
-              <div class="stat-row"><span>Media fuera</span><strong id="awayAvgDays">—</strong></div>
-            </div>
-          </article>
-
+     
           <article class="panel-card wide">
             <div class="panel-head">
               <h3>Coste por mes</h3>
@@ -340,7 +337,7 @@
   </div>
 
   <footer class="footer">
-    <small>v3.6.1 · Davo</small>
+    <small>v3.6.2 · Davo</small>
   </footer>
 
   <script type="module" src="app.js"></script>
