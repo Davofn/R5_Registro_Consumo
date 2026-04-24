@@ -48,7 +48,7 @@
           <strong id="realRange">—</strong>
         </article>
         <article class="metric-card">
-          <span>Coste /100kms</span>
+          <span>Coste / 100 km</span>
           <strong id="costPer100">—</strong>
         </article>
         <article class="metric-card">
@@ -104,11 +104,6 @@
       <section class="tab-panel" id="tab-history" role="tabpanel">
         <div class="history-toolbar">
           <button id="toggleFilters" class="ghost">Filtrar</button>
-        <div class="toolbar-actions">
-            <button id="exportCSV" class="ghost">Exportar CSV</button>
-            <button id="importCSV" class="ghost">Importar CSV</button>
-            <input type="file" id="csvFile" accept=".csv,text/csv" hidden />
-          </div>
         </div>
 
         <div id="filtersPanel" class="filters-panel hidden">
@@ -134,11 +129,6 @@
               </select>
             </label>
           </div>
-
-          <label class="checkbox inline-checkbox">
-            <input id="replaceOnImport" type="checkbox" />
-            <span>Reemplazar todo al importar</span>
-          </label>
         </div>
 
         <div id="historyList" class="history-list"></div>
@@ -146,14 +136,14 @@
 
       <section class="tab-panel" id="tab-insights" role="tabpanel">
         <div class="summary-grid insights-grid">
-         <article class="panel-card">
-  <div class="panel-head">
-    <h3>Consumo por mes</h3>
-  </div>
-  <div id="monthlyInsights" class="stats-list">
-    <div class="stat-row"><span>—</span><strong>—</strong></div>
-  </div>
-</article>
+          <article class="panel-card">
+            <div class="panel-head">
+              <h3>Consumo por mes</h3>
+            </div>
+            <div id="monthlyInsights" class="stats-list">
+              <div class="stat-row"><span>—</span><strong>—</strong></div>
+            </div>
+          </article>
 
           <article class="panel-card">
             <div class="panel-head">
@@ -285,7 +275,7 @@
   </div>
 
   <footer class="footer">
-    <small>v3.5 · Davo</small>
+    <small>v3.5.1 · Davo</small>
   </footer>
 
   <script type="module" src="app.js"></script>
