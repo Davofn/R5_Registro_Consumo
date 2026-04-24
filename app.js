@@ -780,7 +780,20 @@ const typeInsightsEl = document.getElementById("typeInsights");
     if (Math.abs(delta) < 0.05) return "Base";
     return `${delta > 0 ? "+" : ""}${formatNumber(delta, 0)}%`;
   }
+function getYearFromDate(dateStr) {
+  const [, , y] = dateStr.split("/");
+  return Number(y);
+}
 
+function getCurrentAppYear() {
+  if (!trips.length) return new Date().getFullYear();
+  const years = trips
+    .filter(t => t.date)
+    .map(t => getYearFromDate(t.date))
+    .filter(Number.isFinite);
+
+  return years.length ? Math.max(...years) : new Date().getFullYear();
+}
   function formatRangeFromAvg(avg) {
     if (!Number.isFinite(avg) || avg <= 0) return "—";
     const range = (BATTERY_KWH / avg) * 100;
@@ -799,44 +812,90 @@ function formatMonthLabel(monthKey) {
   ];
   return `${monthNames[Number(month) - 1]} ${year}`;
 }
-  function renderInsights() {
+ function renderInsights() {
   const drivingTrips = getDrivingTrips(trips);
 
-  // ===== BLOQUE 1: CONSUMO POR MES =====
-  const monthlyMap = new Map();
+  // ===== BLOQUE 1: CONSUMO POR MES / AÑO =====
+  const monthMap = new Map();
 
   drivingTrips.forEach(trip => {
     if (!trip.date) return;
 
-    const monthKey = getMonthKeyFromDate(trip.date);
+    const monthKey = getMonthKeyFromDate(trip.date); // YYYY-MM
 
-    if (!monthlyMap.has(monthKey)) {
-      monthlyMap.set(monthKey, {
+    if (!monthMap.has(monthKey)) {
+      monthMap.set(monthKey, {
         km: 0,
-        kwh: 0
+        kwh: 0,
+        year: getYearFromDate(trip.date)
       });
     }
 
-    const monthData = monthlyMap.get(monthKey);
-    monthData.km += Number(trip.kmTrip) || 0;
-    monthData.kwh += Number(trip.kwhUsed) || 0;
+    const data = monthMap.get(monthKey);
+    data.km += Number(trip.kmTrip) || 0;
+    data.kwh += Number(trip.kwhUsed) || 0;
   });
 
-  const monthlyRows = Array.from(monthlyMap.entries())
-    .sort((a, b) => a[0].localeCompare(b[0]))
-    .map(([monthKey, data]) => {
-      const avg = data.km > 0 ? safeAvg(data.kwh, data.km) : NaN;
-      return `
-        <div class="stat-row">
-          <span>${formatMonthLabel(monthKey)}</span>
-          <strong>${Number.isFinite(avg) ? formatAvgCompact(avg) : "—"} · ${formatKm(data.km)}</strong>
-        </div>
-      `;
-    });
+  const monthEntries = Array.from(monthMap.entries())
+    .map(([monthKey, data]) => ({
+      monthKey,
+      year: data.year,
+      km: data.km,
+      kwh: data.kwh,
+      avg: data.km > 0 ? safeAvg(data.kwh, data.km) : NaN
+    }))
+    .sort((a, b) => b.monthKey.localeCompare(a.monthKey));
 
-  monthlyInsightsEl.innerHTML = monthlyRows.length
-    ? monthlyRows.join("")
-    : `<div class="stat-row"><span>Sin datos</span><strong>—</strong></div>`;
+  const currentYear = getCurrentAppYear();
+
+  const currentYearMonths = monthEntries.filter(m => m.year === currentYear);
+  const previousYears = [...new Set(monthEntries.map(m => m.year).filter(y => y < currentYear))].sort((a, b) => b - a);
+
+  function renderMonthRow(month) {
+    return `
+      <div class="stat-row monthly-detail-row">
+        <span>${formatMonthLabel(month.monthKey)}</span>
+        <strong>${Number.isFinite(month.avg) ? formatAvgCompact(month.avg) : "—"} · ${formatKm(month.km)}</strong>
+      </div>
+    `;
+  }
+
+  const currentYearHtml = currentYearMonths.map(renderMonthRow).join("");
+
+  const previousYearsHtml = previousYears.map(year => {
+    const yearMonths = monthEntries.filter(m => m.year === year);
+    const totalKm = yearMonths.reduce((sum, m) => sum + m.km, 0);
+    const totalKwh = yearMonths.reduce((sum, m) => sum + m.kwh, 0);
+    const avg = totalKm > 0 ? safeAvg(totalKwh, totalKm) : NaN;
+    const detailsId = `year-details-${year}`;
+
+    return `
+      <div class="year-summary-block">
+        <button class="year-summary-toggle" data-target="${detailsId}" type="button">
+          <span>Resumen ${year}</span>
+          <strong>${Number.isFinite(avg) ? formatAvgCompact(avg) : "—"} · ${formatKm(totalKm)}</strong>
+        </button>
+        <div id="${detailsId}" class="year-month-details hidden">
+          ${yearMonths.map(renderMonthRow).join("")}
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  monthlyInsightsEl.innerHTML =
+    currentYearHtml || previousYearsHtml
+      ? `${currentYearHtml}${previousYearsHtml}`
+      : `<div class="stat-row"><span>Sin datos</span><strong>—</strong></div>`;
+
+  // Activar despliegue años anteriores
+  monthlyInsightsEl.querySelectorAll(".year-summary-toggle").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const target = document.getElementById(btn.dataset.target);
+      if (!target) return;
+      target.classList.toggle("hidden");
+      btn.classList.toggle("open");
+    });
+  });
 
   // ===== BLOQUE 2: USO Y EFICIENCIA POR TIPO =====
   const byType = {
