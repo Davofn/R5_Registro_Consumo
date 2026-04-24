@@ -64,28 +64,22 @@ document.addEventListener("DOMContentLoaded", () => {
   const filterTypeEl = document.getElementById("filterType");
   const filterExtrasEl = document.getElementById("filterExtras");
 
-  // IMPORT / EXPORT
-  const exportCSVBtn = document.getElementById("exportCSV");
-  const importCSVBtn = document.getElementById("importCSV");
-  const csvFileEl = document.getElementById("csvFile");
-  const replaceOnImportEl = document.getElementById("replaceOnImport");
+  // MSG
+  const msgEl = document.getElementById("msg");
 
- // MSG
-const msgEl = document.getElementById("msg");
-
-// INSIGHTS
-const monthlyInsightsEl = document.getElementById("monthlyInsights");
-const typeInsightsEl = document.getElementById("typeInsights");
+  // INSIGHTS
+  const monthlyInsightsEl = document.getElementById("monthlyInsights");
+  const typeInsightsEl = document.getElementById("typeInsights");
 
   // TABS
   const tabs = document.querySelectorAll(".tab");
   const panels = document.querySelectorAll(".tab-panel");
 
- const required = [
-  tripModal, openTripModalBtn, closeTripModalBtn, closeTripModalBackdrop,
-  toggleAdvancedBtn, advancedFields, saveTripBtn,
-  historyListEl, monthlyInsightsEl, typeInsightsEl
-];
+  const required = [
+    tripModal, openTripModalBtn, closeTripModalBtn, closeTripModalBackdrop,
+    toggleAdvancedBtn, advancedFields, saveTripBtn,
+    historyListEl, monthlyInsightsEl, typeInsightsEl
+  ];
 
   if (required.some(el => !el)) {
     console.error("Faltan elementos del DOM. Revisa IDs del HTML.");
@@ -159,6 +153,36 @@ const typeInsightsEl = document.getElementById("typeInsights");
     if (dateStr.includes("-")) return new Date(dateStr).getTime();
     const [d, m, y] = dateStr.split("/").map(Number);
     return new Date(y, m - 1, d).getTime();
+  }
+
+  function getYearFromDate(dateStr) {
+    const [, , y] = dateStr.split("/");
+    return Number(y);
+  }
+
+  function getMonthKeyFromDate(dateStr) {
+    const [, m, y] = dateStr.split("/");
+    return `${y}-${m}`;
+  }
+
+  function formatMonthLabel(monthKey) {
+    const [year, month] = monthKey.split("-");
+    const monthNames = [
+      "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+      "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+    ];
+    return `${monthNames[Number(month) - 1]} ${year}`;
+  }
+
+  function getCurrentAppYear() {
+    if (!trips.length) return new Date().getFullYear();
+
+    const years = trips
+      .filter(t => t.date)
+      .map(t => getYearFromDate(t.date))
+      .filter(Number.isFinite);
+
+    return years.length ? Math.max(...years) : new Date().getFullYear();
   }
 
   function sortTrips(a, b) {
@@ -262,32 +286,6 @@ const typeInsightsEl = document.getElementById("typeInsights");
 
     if (error) {
       console.error("Error borrando trip en Supabase:", error);
-      throw error;
-    }
-  }
-
-  async function importTripsToSupabase(entries) {
-    if (!entries.length) return { inserted: 0 };
-
-    const rows = entries.map(tripToRow);
-    const { error } = await supabase.from("trips").insert(rows);
-
-    if (error) {
-      console.error("Error importando CSV a Supabase:", error);
-      throw error;
-    }
-
-    return { inserted: rows.length };
-  }
-
-  async function deleteAllTripsFromSupabase() {
-    const { error } = await supabase
-      .from("trips")
-      .delete()
-      .not("id", "is", null);
-
-    if (error) {
-      console.error("Error borrando histórico en Supabase:", error);
       throw error;
     }
   }
@@ -423,7 +421,6 @@ const typeInsightsEl = document.getElementById("typeInsights");
     if (!filteredTrips.length) return [];
 
     const sorted = [...filteredTrips].sort(sortTrips);
-
     const stints = [];
     let current = [];
 
@@ -780,165 +777,138 @@ const typeInsightsEl = document.getElementById("typeInsights");
     if (Math.abs(delta) < 0.05) return "Base";
     return `${delta > 0 ? "+" : ""}${formatNumber(delta, 0)}%`;
   }
-function getYearFromDate(dateStr) {
-  const [, , y] = dateStr.split("/");
-  return Number(y);
-}
 
-function getCurrentAppYear() {
-  if (!trips.length) return new Date().getFullYear();
-  const years = trips
-    .filter(t => t.date)
-    .map(t => getYearFromDate(t.date))
-    .filter(Number.isFinite);
-
-  return years.length ? Math.max(...years) : new Date().getFullYear();
-}
   function formatRangeFromAvg(avg) {
     if (!Number.isFinite(avg) || avg <= 0) return "—";
     const range = (BATTERY_KWH / avg) * 100;
     return `${Math.round(range)} km`;
   }
-function getMonthKeyFromDate(dateStr) {
-  const [d, m, y] = dateStr.split("/");
-  return `${y}-${m}`;
-}
 
-function formatMonthLabel(monthKey) {
-  const [year, month] = monthKey.split("-");
-  const monthNames = [
-    "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
-    "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
-  ];
-  return `${monthNames[Number(month) - 1]} ${year}`;
-}
- function renderInsights() {
-  const drivingTrips = getDrivingTrips(trips);
+  function renderInsights() {
+    const drivingTrips = getDrivingTrips(trips);
 
-  // ===== BLOQUE 1: CONSUMO POR MES / AÑO =====
-  const monthMap = new Map();
+    // ===== BLOQUE 1: CONSUMO POR MES / AÑO =====
+    const monthMap = new Map();
 
-  drivingTrips.forEach(trip => {
-    if (!trip.date) return;
+    drivingTrips.forEach(trip => {
+      if (!trip.date) return;
 
-    const monthKey = getMonthKeyFromDate(trip.date); // YYYY-MM
+      const monthKey = getMonthKeyFromDate(trip.date);
 
-    if (!monthMap.has(monthKey)) {
-      monthMap.set(monthKey, {
-        km: 0,
-        kwh: 0,
-        year: getYearFromDate(trip.date)
-      });
-    }
+      if (!monthMap.has(monthKey)) {
+        monthMap.set(monthKey, {
+          km: 0,
+          kwh: 0,
+          year: getYearFromDate(trip.date)
+        });
+      }
 
-    const data = monthMap.get(monthKey);
-    data.km += Number(trip.kmTrip) || 0;
-    data.kwh += Number(trip.kwhUsed) || 0;
-  });
-
-  const monthEntries = Array.from(monthMap.entries())
-    .map(([monthKey, data]) => ({
-      monthKey,
-      year: data.year,
-      km: data.km,
-      kwh: data.kwh,
-      avg: data.km > 0 ? safeAvg(data.kwh, data.km) : NaN
-    }))
-    .sort((a, b) => b.monthKey.localeCompare(a.monthKey));
-
-  const currentYear = getCurrentAppYear();
-
-  const currentYearMonths = monthEntries.filter(m => m.year === currentYear);
-  const previousYears = [...new Set(monthEntries.map(m => m.year).filter(y => y < currentYear))].sort((a, b) => b - a);
-
-  function renderMonthRow(month) {
-    return `
-      <div class="stat-row monthly-detail-row">
-        <span>${formatMonthLabel(month.monthKey)}</span>
-        <strong>${Number.isFinite(month.avg) ? formatAvgCompact(month.avg) : "—"} · ${formatKm(month.km)}</strong>
-      </div>
-    `;
-  }
-
-  const currentYearHtml = currentYearMonths.map(renderMonthRow).join("");
-
-  const previousYearsHtml = previousYears.map(year => {
-    const yearMonths = monthEntries.filter(m => m.year === year);
-    const totalKm = yearMonths.reduce((sum, m) => sum + m.km, 0);
-    const totalKwh = yearMonths.reduce((sum, m) => sum + m.kwh, 0);
-    const avg = totalKm > 0 ? safeAvg(totalKwh, totalKm) : NaN;
-    const detailsId = `year-details-${year}`;
-
-    return `
-      <div class="year-summary-block">
-        <button class="year-summary-toggle" data-target="${detailsId}" type="button">
-          <span>Resumen ${year}</span>
-          <strong>${Number.isFinite(avg) ? formatAvgCompact(avg) : "—"} · ${formatKm(totalKm)}</strong>
-        </button>
-        <div id="${detailsId}" class="year-month-details hidden">
-          ${yearMonths.map(renderMonthRow).join("")}
-        </div>
-      </div>
-    `;
-  }).join("");
-
-  monthlyInsightsEl.innerHTML =
-    currentYearHtml || previousYearsHtml
-      ? `${currentYearHtml}${previousYearsHtml}`
-      : `<div class="stat-row"><span>Sin datos</span><strong>—</strong></div>`;
-
-  // Activar despliegue años anteriores
-  monthlyInsightsEl.querySelectorAll(".year-summary-toggle").forEach(btn => {
-    btn.addEventListener("click", () => {
-      const target = document.getElementById(btn.dataset.target);
-      if (!target) return;
-      target.classList.toggle("hidden");
-      btn.classList.toggle("open");
+      const data = monthMap.get(monthKey);
+      data.km += Number(trip.kmTrip) || 0;
+      data.kwh += Number(trip.kwhUsed) || 0;
     });
-  });
 
-  // ===== BLOQUE 2: USO Y EFICIENCIA POR TIPO =====
-  const byType = {
-    Ciudad: drivingTrips.filter(t => t.tripType === "Ciudad"),
-    Mixto: drivingTrips.filter(t => t.tripType === "Mixto"),
-    Autopista: drivingTrips.filter(t => t.tripType === "Autopista")
-  };
+    const monthEntries = Array.from(monthMap.entries())
+      .map(([monthKey, data]) => ({
+        monthKey,
+        year: data.year,
+        km: data.km,
+        kwh: data.kwh,
+        avg: data.km > 0 ? safeAvg(data.kwh, data.km) : NaN
+      }))
+      .sort((a, b) => b.monthKey.localeCompare(a.monthKey));
 
-  const totalDrivingKm = drivingTrips.reduce((sum, t) => sum + t.kmTrip, 0);
+    const currentYear = getCurrentAppYear();
+    const currentYearMonths = monthEntries.filter(m => m.year === currentYear);
+    const previousYears = [...new Set(monthEntries.map(m => m.year).filter(y => y < currentYear))].sort((a, b) => b - a);
 
-  const typeStats = Object.entries(byType).map(([name, arr]) => {
-    const km = arr.reduce((sum, t) => sum + t.kmTrip, 0);
-    const avg = getWeightedAvg(arr);
-    const usagePct = totalDrivingKm > 0 ? (km / totalDrivingKm) * 100 : NaN;
-    return { name, km, avg, usagePct };
-  });
-
-  const validTypeStats = typeStats.filter(t => Number.isFinite(t.avg) && t.avg > 0);
-  const bestAvg = validTypeStats.length ? Math.min(...validTypeStats.map(t => t.avg)) : NaN;
-
-  function renderTypeLine(stat) {
-    if (!Number.isFinite(stat.avg) || stat.avg <= 0) {
-      return `<div class="stat-row"><span>${stat.name}</span><strong>—</strong></div>`;
+    function renderMonthRow(month) {
+      return `
+        <div class="stat-row monthly-detail-row">
+          <span>${formatMonthLabel(month.monthKey)}</span>
+          <strong>${Number.isFinite(month.avg) ? formatAvg(month.avg) : "—"} · ${formatKm(month.km)}</strong>
+        </div>
+      `;
     }
 
-    const usageText = Number.isFinite(stat.usagePct) ? `${formatNumber(stat.usagePct, 0)}% uso` : "—";
-    const penaltyText = formatDeltaPercent(bestAvg, stat.avg);
-    const rangeText = formatRangeFromAvg(stat.avg);
+    const currentYearHtml = currentYearMonths.map(renderMonthRow).join("");
 
-    return `
-      <div class="stat-row">
-        <span>${stat.name}</span>
-        <strong>${usageText} · ${penaltyText} · ${rangeText}</strong>
-      </div>
+    const previousYearsHtml = previousYears.map(year => {
+      const yearMonths = monthEntries.filter(m => m.year === year);
+      const totalKm = yearMonths.reduce((sum, m) => sum + m.km, 0);
+      const totalKwh = yearMonths.reduce((sum, m) => sum + m.kwh, 0);
+      const avg = totalKm > 0 ? safeAvg(totalKwh, totalKm) : NaN;
+      const detailsId = `year-details-${year}`;
+
+      return `
+        <div class="year-summary-block">
+          <button class="year-summary-toggle" data-target="${detailsId}" type="button">
+            <span>Resumen ${year}</span>
+            <strong>${Number.isFinite(avg) ? formatAvg(avg) : "—"} · ${formatKm(totalKm)}</strong>
+          </button>
+          <div id="${detailsId}" class="year-month-details hidden">
+            ${yearMonths.map(renderMonthRow).join("")}
+          </div>
+        </div>
+      `;
+    }).join("");
+
+    monthlyInsightsEl.innerHTML =
+      (currentYearHtml || previousYearsHtml)
+        ? `${currentYearHtml}${previousYearsHtml}`
+        : `<div class="stat-row"><span>Sin datos</span><strong>—</strong></div>`;
+
+    monthlyInsightsEl.querySelectorAll(".year-summary-toggle").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const target = document.getElementById(btn.dataset.target);
+        if (!target) return;
+        target.classList.toggle("hidden");
+        btn.classList.toggle("open");
+      });
+    });
+
+    // ===== BLOQUE 2: USO Y EFICIENCIA POR TIPO =====
+    const byType = {
+      Ciudad: drivingTrips.filter(t => t.tripType === "Ciudad"),
+      Mixto: drivingTrips.filter(t => t.tripType === "Mixto"),
+      Autopista: drivingTrips.filter(t => t.tripType === "Autopista")
+    };
+
+    const totalDrivingKm = drivingTrips.reduce((sum, t) => sum + t.kmTrip, 0);
+
+    const typeStats = Object.entries(byType).map(([name, arr]) => {
+      const km = arr.reduce((sum, t) => sum + t.kmTrip, 0);
+      const avg = getWeightedAvg(arr);
+      const usagePct = totalDrivingKm > 0 ? (km / totalDrivingKm) * 100 : NaN;
+      return { name, km, avg, usagePct };
+    });
+
+    const validTypeStats = typeStats.filter(t => Number.isFinite(t.avg) && t.avg > 0);
+    const bestAvg = validTypeStats.length ? Math.min(...validTypeStats.map(t => t.avg)) : NaN;
+
+    function renderTypeLine(stat) {
+      if (!Number.isFinite(stat.avg) || stat.avg <= 0) {
+        return `<div class="stat-row"><span>${stat.name}</span><strong>—</strong></div>`;
+      }
+
+      const usageText = Number.isFinite(stat.usagePct) ? `${formatNumber(stat.usagePct, 0)}% uso` : "—";
+      const penaltyText = formatDeltaPercent(bestAvg, stat.avg);
+      const rangeText = formatRangeFromAvg(stat.avg);
+
+      return `
+        <div class="stat-row">
+          <span>${stat.name}</span>
+          <strong>${usageText} · ${penaltyText} · ${rangeText}</strong>
+        </div>
+      `;
+    }
+
+    typeInsightsEl.innerHTML = `
+      ${renderTypeLine(typeStats.find(t => t.name === "Ciudad"))}
+      ${renderTypeLine(typeStats.find(t => t.name === "Mixto"))}
+      ${renderTypeLine(typeStats.find(t => t.name === "Autopista"))}
     `;
   }
-
-  typeInsightsEl.innerHTML = `
-    ${renderTypeLine(typeStats.find(t => t.name === "Ciudad"))}
-    ${renderTypeLine(typeStats.find(t => t.name === "Mixto"))}
-    ${renderTypeLine(typeStats.find(t => t.name === "Autopista"))}
-  `;
-}
 
   function renderAll() {
     renderHero();
@@ -969,6 +939,7 @@ function formatMonthLabel(monthKey) {
   });
 
   tripTypeEl.addEventListener("change", syncGhostTripUi);
+
   kmStartEl.addEventListener("input", () => {
     if (tripTypeEl.value === GHOST_TYPE && kmStartEl.value) {
       kmEndEl.value = kmStartEl.value;
@@ -1075,111 +1046,6 @@ function formatMonthLabel(monthKey) {
 
   [filterTypeEl, filterExtrasEl].forEach(el => {
     el.addEventListener("change", renderAll);
-  });
-
-  exportCSVBtn.addEventListener("click", () => {
-    if (!trips.length) {
-      alert("No hay trayectos para exportar.");
-      return;
-    }
-
-    const headers = [
-      "date","tripType","kmStart","kmEnd","kmTrip","socStart","socEnd","socUsed",
-      "kwhUsed","avg","price","cost","climate","seatsHeat","notes","created_at"
-    ];
-
-    const rows = trips.map(t =>
-      headers.map(h => `"${String(t[h] ?? "").replaceAll('"', '""')}"`).join(",")
-    );
-
-    const csv = [headers.join(","), ...rows].join("\n");
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "trips.csv";
-    a.click();
-
-    URL.revokeObjectURL(url);
-  });
-
-  importCSVBtn.addEventListener("click", () => {
-    csvFileEl.click();
-  });
-
-  csvFileEl.addEventListener("change", async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const text = await file.text();
-    const lines = text.split(/\r?\n/).filter(Boolean);
-
-    if (lines.length < 2) {
-      alert("CSV vacío o inválido.");
-      return;
-    }
-
-    const headers = lines[0].split(",").map(h => h.replace(/^"|"$/g, ""));
-    const imported = [];
-
-    for (let i = 1; i < lines.length; i++) {
-      const values = lines[i].match(/(".*?"|[^",]+)(?=\s*,|\s*$)/g) || [];
-      const row = {};
-
-      headers.forEach((header, idx) => {
-        row[header] = (values[idx] || "").replace(/^"|"$/g, "").replace(/""/g, '"');
-      });
-
-      imported.push({
-        date: row.date,
-        tripType: row.tripType,
-        kmStart: Number(row.kmStart),
-        kmEnd: Number(row.kmEnd),
-        kmTrip: Number(row.kmTrip),
-        socStart: Number(row.socStart),
-        socEnd: Number(row.socEnd),
-        socUsed: Number(row.socUsed),
-        kwhUsed: Number(row.kwhUsed),
-        avg: Number(row.avg),
-        external: row.external === "true",
-        price: Number(row.price),
-        cost: Number(row.cost),
-        climate: row.climate || "No",
-        seatsHeat: row.seatsHeat || "No",
-        notes: row.notes || "",
-        created_at: Number(row.created_at || Date.now() + i)
-      });
-    }
-
-    try {
-      if (replaceOnImportEl.checked) {
-        await deleteAllTripsFromSupabase();
-        await importTripsToSupabase(imported);
-      } else {
-        const existingKeys = new Set(
-          trips.map(t => `${t.date}|${t.kmStart}|${t.kmEnd}|${t.socStart}|${t.socEnd}|${t.tripType}`)
-        );
-
-        const uniqueToInsert = imported.filter(t => {
-          const key = `${t.date}|${t.kmStart}|${t.kmEnd}|${t.socStart}|${t.socEnd}|${t.tripType}`;
-          if (existingKeys.has(key)) return false;
-          existingKeys.add(key);
-          return true;
-        });
-
-        await importTripsToSupabase(uniqueToInsert);
-      }
-
-      trips = await fetchTripsFromSupabase();
-      renderAll();
-      showMsg("Importación completada.");
-    } catch (err) {
-      console.error(err);
-      alert("Error importando CSV a Supabase.");
-    } finally {
-      csvFileEl.value = "";
-    }
   });
 
   tabs.forEach(btn => {
