@@ -570,6 +570,46 @@ document.addEventListener("DOMContentLoaded", () => {
     return warnings;
   }
 
+  function getInferredChargeEvents(arr = trips) {
+    const sorted = [...arr].sort(sortTrips);
+    const events = [];
+
+    for (let i = 1; i < sorted.length; i++) {
+      const prev = sorted[i - 1];
+      const curr = sorted[i];
+
+      if (curr.socStart > prev.socEnd) {
+        events.push({
+          date: curr.date,
+          external: !!curr.external,
+          socFrom: prev.socEnd,
+          socTo: curr.socStart,
+          socGained: curr.socStart - prev.socEnd,
+          linkedTripId: curr.id
+        });
+      }
+    }
+
+    return events;
+  }
+
+  function getDateDiffDays(dateA, dateB) {
+    const ms = Math.abs(sortDateValue(dateB) - sortDateValue(dateA));
+    return ms / (1000 * 60 * 60 * 24);
+  }
+
+  function getAverageGapDays(arr) {
+    if (arr.length < 2) return NaN;
+    const sorted = [...arr].sort((a, b) => sortDateValue(a.date) - sortDateValue(b.date));
+    let totalDays = 0;
+
+    for (let i = 1; i < sorted.length; i++) {
+      totalDays += getDateDiffDays(sorted[i - 1].date, sorted[i].date);
+    }
+
+    return totalDays / (sorted.length - 1);
+  }
+
   function renderHero() {
     const drivingTrips = getDrivingTrips(trips);
 
@@ -815,23 +855,6 @@ document.addEventListener("DOMContentLoaded", () => {
     return `${Math.round(range)} km`;
   }
 
-  function getDateDiffDays(dateA, dateB) {
-    const ms = Math.abs(sortDateValue(dateB) - sortDateValue(dateA));
-    return ms / (1000 * 60 * 60 * 24);
-  }
-
-  function getAverageGapDays(arr) {
-    if (arr.length < 2) return NaN;
-    const sorted = [...arr].sort((a, b) => sortDateValue(a.date) - sortDateValue(b.date));
-    let totalDays = 0;
-
-    for (let i = 1; i < sorted.length; i++) {
-      totalDays += getDateDiffDays(sorted[i - 1].date, sorted[i].date);
-    }
-
-    return totalDays / (sorted.length - 1);
-  }
-
   function renderInsights() {
     const drivingTrips = getDrivingTrips(trips);
 
@@ -994,10 +1017,14 @@ document.addEventListener("DOMContentLoaded", () => {
     if (awayAvgPriceEl) awayAvgPriceEl.textContent = formatPricePerKwh(awayAvgPrice);
     if (awayEnergyPctEl) awayEnergyPctEl.textContent = formatPercent(awayEnergyPct);
 
-    if (homeSessionsEl) homeSessionsEl.textContent = String(homeTrips.length);
-    if (awaySessionsEl) awaySessionsEl.textContent = String(awayTrips.length);
-    if (homeAvgDaysEl) homeAvgDaysEl.textContent = formatDays(getAverageGapDays(homeTrips));
-    if (awayAvgDaysEl) awayAvgDaysEl.textContent = formatDays(getAverageGapDays(awayTrips));
+    const chargeEvents = getInferredChargeEvents(trips);
+    const homeChargeEvents = chargeEvents.filter(e => !e.external);
+    const awayChargeEvents = chargeEvents.filter(e => e.external);
+
+    if (homeSessionsEl) homeSessionsEl.textContent = String(homeChargeEvents.length);
+    if (awaySessionsEl) awaySessionsEl.textContent = String(awayChargeEvents.length);
+    if (homeAvgDaysEl) homeAvgDaysEl.textContent = formatDays(getAverageGapDays(homeChargeEvents));
+    if (awayAvgDaysEl) awayAvgDaysEl.textContent = formatDays(getAverageGapDays(awayChargeEvents));
 
     const monthMap = new Map();
 
