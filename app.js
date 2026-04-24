@@ -29,6 +29,25 @@ document.addEventListener("DOMContentLoaded", () => {
   const avgHighwayEl = document.getElementById("avgHighway");
   const lastStintSummaryEl = document.getElementById("lastStintSummary");
 
+  // COSTS
+  const costsTotalCostEl = document.getElementById("costsTotalCost");
+  const costsTotalKwhEl = document.getElementById("costsTotalKwh");
+  const costsPer100El = document.getElementById("costsPer100");
+  const costsAvgPriceEl = document.getElementById("costsAvgPrice");
+  const homeKwhEl = document.getElementById("homeKwh");
+  const homeCostEl = document.getElementById("homeCost");
+  const homeAvgPriceEl = document.getElementById("homeAvgPrice");
+  const homeEnergyPctEl = document.getElementById("homeEnergyPct");
+  const awayKwhEl = document.getElementById("awayKwh");
+  const awayCostEl = document.getElementById("awayCost");
+  const awayAvgPriceEl = document.getElementById("awayAvgPrice");
+  const awayEnergyPctEl = document.getElementById("awayEnergyPct");
+  const homeSessionsEl = document.getElementById("homeSessions");
+  const homeAvgDaysEl = document.getElementById("homeAvgDays");
+  const awaySessionsEl = document.getElementById("awaySessions");
+  const awayAvgDaysEl = document.getElementById("awayAvgDays");
+  const monthlyCostsEl = document.getElementById("monthlyCosts");
+
   // MODAL
   const tripModal = document.getElementById("tripModal");
   const openTripModalBtn = document.getElementById("openTripModal");
@@ -78,7 +97,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const required = [
     tripModal, openTripModalBtn, closeTripModalBtn, closeTripModalBackdrop,
     toggleAdvancedBtn, advancedFields, saveTripBtn,
-    historyListEl, monthlyInsightsEl, typeInsightsEl
+    historyListEl, monthlyInsightsEl, typeInsightsEl, monthlyCostsEl
   ];
 
   if (required.some(el => !el)) {
@@ -116,6 +135,18 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function formatEuro(value) {
     return `${formatNumber(value, 2)} €`;
+  }
+
+  function formatPricePerKwh(value) {
+    return Number.isFinite(value) && value > 0 ? `${formatNumber(value, 3)} €/kWh` : "—";
+  }
+
+  function formatPercent(value) {
+    return Number.isFinite(value) ? `${formatNumber(value, 0)}%` : "—";
+  }
+
+  function formatDays(value) {
+    return Number.isFinite(value) ? `${formatNumber(value, 1)} días` : "—";
   }
 
   function safeAvg(totalKwh, totalKm) {
@@ -784,10 +815,26 @@ document.addEventListener("DOMContentLoaded", () => {
     return `${Math.round(range)} km`;
   }
 
+  function getDateDiffDays(dateA, dateB) {
+    const ms = Math.abs(sortDateValue(dateB) - sortDateValue(dateA));
+    return ms / (1000 * 60 * 60 * 24);
+  }
+
+  function getAverageGapDays(arr) {
+    if (arr.length < 2) return NaN;
+    const sorted = [...arr].sort((a, b) => sortDateValue(a.date) - sortDateValue(b.date));
+    let totalDays = 0;
+
+    for (let i = 1; i < sorted.length; i++) {
+      totalDays += getDateDiffDays(sorted[i - 1].date, sorted[i].date);
+    }
+
+    return totalDays / (sorted.length - 1);
+  }
+
   function renderInsights() {
     const drivingTrips = getDrivingTrips(trips);
 
-    // ===== BLOQUE 1: CONSUMO POR MES / AÑO =====
     const monthMap = new Map();
 
     drivingTrips.forEach(trip => {
@@ -867,7 +914,6 @@ document.addEventListener("DOMContentLoaded", () => {
       });
     });
 
-    // ===== BLOQUE 2: USO Y EFICIENCIA POR TIPO =====
     const byType = {
       Ciudad: drivingTrips.filter(t => t.tripType === "Ciudad"),
       Mixto: drivingTrips.filter(t => t.tripType === "Mixto"),
@@ -910,11 +956,134 @@ document.addEventListener("DOMContentLoaded", () => {
     `;
   }
 
+  function renderCosts() {
+    const drivingTrips = getDrivingTrips(trips);
+    const totalKm = drivingTrips.reduce((sum, t) => sum + t.kmTrip, 0);
+    const totalKwh = trips.reduce((sum, t) => sum + t.kwhUsed, 0);
+    const totalCost = trips.reduce((sum, t) => sum + t.cost, 0);
+
+    const costPer100 = totalKm > 0 ? (totalCost / totalKm) * 100 : NaN;
+    const avgPrice = totalKwh > 0 ? totalCost / totalKwh : NaN;
+
+    if (costsTotalCostEl) costsTotalCostEl.textContent = totalCost > 0 ? formatEuro(totalCost) : "—";
+    if (costsTotalKwhEl) costsTotalKwhEl.textContent = totalKwh > 0 ? formatKwh(totalKwh) : "—";
+    if (costsPer100El) costsPer100El.textContent = Number.isFinite(costPer100) ? formatEuro(costPer100) : "—";
+    if (costsAvgPriceEl) costsAvgPriceEl.textContent = formatPricePerKwh(avgPrice);
+
+    const homeTrips = trips.filter(t => !t.external);
+    const awayTrips = trips.filter(t => !!t.external);
+
+    const homeKwh = homeTrips.reduce((sum, t) => sum + t.kwhUsed, 0);
+    const homeCost = homeTrips.reduce((sum, t) => sum + t.cost, 0);
+    const awayKwh = awayTrips.reduce((sum, t) => sum + t.kwhUsed, 0);
+    const awayCost = awayTrips.reduce((sum, t) => sum + t.cost, 0);
+
+    const homeAvgPrice = homeKwh > 0 ? homeCost / homeKwh : NaN;
+    const awayAvgPrice = awayKwh > 0 ? awayCost / awayKwh : NaN;
+
+    const homeEnergyPct = totalKwh > 0 ? (homeKwh / totalKwh) * 100 : NaN;
+    const awayEnergyPct = totalKwh > 0 ? (awayKwh / totalKwh) * 100 : NaN;
+
+    if (homeKwhEl) homeKwhEl.textContent = homeKwh > 0 ? formatKwh(homeKwh) : "—";
+    if (homeCostEl) homeCostEl.textContent = homeCost > 0 ? formatEuro(homeCost) : "—";
+    if (homeAvgPriceEl) homeAvgPriceEl.textContent = formatPricePerKwh(homeAvgPrice);
+    if (homeEnergyPctEl) homeEnergyPctEl.textContent = formatPercent(homeEnergyPct);
+
+    if (awayKwhEl) awayKwhEl.textContent = awayKwh > 0 ? formatKwh(awayKwh) : "—";
+    if (awayCostEl) awayCostEl.textContent = awayCost > 0 ? formatEuro(awayCost) : "—";
+    if (awayAvgPriceEl) awayAvgPriceEl.textContent = formatPricePerKwh(awayAvgPrice);
+    if (awayEnergyPctEl) awayEnergyPctEl.textContent = formatPercent(awayEnergyPct);
+
+    if (homeSessionsEl) homeSessionsEl.textContent = String(homeTrips.length);
+    if (awaySessionsEl) awaySessionsEl.textContent = String(awayTrips.length);
+    if (homeAvgDaysEl) homeAvgDaysEl.textContent = formatDays(getAverageGapDays(homeTrips));
+    if (awayAvgDaysEl) awayAvgDaysEl.textContent = formatDays(getAverageGapDays(awayTrips));
+
+    const monthMap = new Map();
+
+    trips.forEach(trip => {
+      if (!trip.date) return;
+      const monthKey = getMonthKeyFromDate(trip.date);
+
+      if (!monthMap.has(monthKey)) {
+        monthMap.set(monthKey, {
+          year: getYearFromDate(trip.date),
+          kwh: 0,
+          cost: 0
+        });
+      }
+
+      const data = monthMap.get(monthKey);
+      data.kwh += Number(trip.kwhUsed) || 0;
+      data.cost += Number(trip.cost) || 0;
+    });
+
+    const monthEntries = Array.from(monthMap.entries())
+      .map(([monthKey, data]) => ({
+        monthKey,
+        year: data.year,
+        kwh: data.kwh,
+        cost: data.cost
+      }))
+      .sort((a, b) => b.monthKey.localeCompare(a.monthKey));
+
+    const currentYear = getCurrentAppYear();
+    const currentYearMonths = monthEntries.filter(m => m.year === currentYear);
+    const previousYears = [...new Set(monthEntries.map(m => m.year).filter(y => y < currentYear))].sort((a, b) => b - a);
+
+    function renderCostMonthRow(month) {
+      return `
+        <div class="stat-row monthly-detail-row">
+          <span>${formatMonthLabel(month.monthKey)}</span>
+          <strong>${formatKwh(month.kwh)} · ${formatEuro(month.cost)}</strong>
+        </div>
+      `;
+    }
+
+    const currentYearHtml = currentYearMonths.map(renderCostMonthRow).join("");
+
+    const previousYearsHtml = previousYears.map(year => {
+      const yearMonths = monthEntries.filter(m => m.year === year);
+      const totalYearKwh = yearMonths.reduce((sum, m) => sum + m.kwh, 0);
+      const totalYearCost = yearMonths.reduce((sum, m) => sum + m.cost, 0);
+      const detailsId = `cost-year-details-${year}`;
+
+      return `
+        <div class="year-summary-block">
+          <button class="year-summary-toggle" data-target="${detailsId}" type="button">
+            <span>Resumen ${year}</span>
+            <strong>${formatKwh(totalYearKwh)} · ${formatEuro(totalYearCost)}</strong>
+          </button>
+          <div id="${detailsId}" class="year-month-details hidden">
+            ${yearMonths.map(renderCostMonthRow).join("")}
+          </div>
+        </div>
+      `;
+    }).join("");
+
+    if (monthlyCostsEl) {
+      monthlyCostsEl.innerHTML =
+        (currentYearHtml || previousYearsHtml)
+          ? `${currentYearHtml}${previousYearsHtml}`
+          : `<div class="stat-row"><span>Sin datos</span><strong>—</strong></div>`;
+
+      monthlyCostsEl.querySelectorAll(".year-summary-toggle").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const target = document.getElementById(btn.dataset.target);
+          if (!target) return;
+          target.classList.toggle("hidden");
+          btn.classList.toggle("open");
+        });
+      });
+    }
+  }
+
   function renderAll() {
     renderHero();
     renderSummary();
     renderHistory();
     renderInsights();
+    renderCosts();
   }
 
   openTripModalBtn.addEventListener("click", () => {
