@@ -977,6 +977,14 @@ document.addEventListener("DOMContentLoaded", () => {
       ${renderTypeLine(typeStats.find(t => t.name === "Mixto"))}
       ${renderTypeLine(typeStats.find(t => t.name === "Autopista"))}
     `;
+    const chargeEvents = getInferredChargeEvents(trips);
+const homeChargeEvents = chargeEvents.filter(e => !e.external);
+const awayChargeEvents = chargeEvents.filter(e => e.external);
+
+if (homeSessionsEl) homeSessionsEl.textContent = String(homeChargeEvents.length);
+if (awaySessionsEl) awaySessionsEl.textContent = String(awayChargeEvents.length);
+if (homeAvgDaysEl) homeAvgDaysEl.textContent = formatDays(getAverageGapDays(homeChargeEvents));
+if (awayAvgDaysEl) awayAvgDaysEl.textContent = formatDays(getAverageGapDays(awayChargeEvents));
   }
 
   function renderCosts() {
@@ -1017,15 +1025,6 @@ document.addEventListener("DOMContentLoaded", () => {
     if (awayAvgPriceEl) awayAvgPriceEl.textContent = formatPricePerKwh(awayAvgPrice);
     if (awayEnergyPctEl) awayEnergyPctEl.textContent = formatPercent(awayEnergyPct);
 
-    const chargeEvents = getInferredChargeEvents(trips);
-    const homeChargeEvents = chargeEvents.filter(e => !e.external);
-    const awayChargeEvents = chargeEvents.filter(e => e.external);
-
-    if (homeSessionsEl) homeSessionsEl.textContent = String(homeChargeEvents.length);
-    if (awaySessionsEl) awaySessionsEl.textContent = String(awayChargeEvents.length);
-    if (homeAvgDaysEl) homeAvgDaysEl.textContent = formatDays(getAverageGapDays(homeChargeEvents));
-    if (awayAvgDaysEl) awayAvgDaysEl.textContent = formatDays(getAverageGapDays(awayChargeEvents));
-
     const monthMap = new Map();
 
     trips.forEach(trip => {
@@ -1058,14 +1057,14 @@ document.addEventListener("DOMContentLoaded", () => {
     const currentYearMonths = monthEntries.filter(m => m.year === currentYear);
     const previousYears = [...new Set(monthEntries.map(m => m.year).filter(y => y < currentYear))].sort((a, b) => b - a);
 
-    function renderCostMonthRow(month) {
-      return `
-        <div class="stat-row monthly-detail-row">
-          <span>${formatMonthLabel(month.monthKey)}</span>
-          <strong>${formatKwh(month.kwh)} · ${formatEuro(month.cost)}</strong>
-        </div>
-      `;
-    }
+ function renderCostMonthRow(month) {
+  return `
+    <div class="stat-row monthly-cost-row">
+      <span>${formatMonthLabel(month.monthKey)}</span>
+      <strong>${formatKwh(month.kwh)} · ${formatEuro(month.cost)}</strong>
+    </div>
+  `;
+}
 
     const currentYearHtml = currentYearMonths.map(renderCostMonthRow).join("");
 
