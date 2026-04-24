@@ -349,6 +349,7 @@ img{display:block;max-width:100%}
 
 .stat-row strong{
   font-size:16px;
+  font-variant-numeric:tabular-nums;
 }
 
 .last-stint-empty{
@@ -587,6 +588,7 @@ select:focus{
   display:grid;
   grid-template-columns:1fr 1fr;
   gap:12px;
+  align-items:stretch;
 }
 
 .cost-box{
@@ -594,11 +596,33 @@ select:focus{
   border:1px solid var(--line);
   border-radius:18px;
   padding:14px;
+  height:100%;
 }
 
 .cost-box h4{
   margin:0 0 12px;
   font-size:15px;
+}
+
+.cost-box .stat-row{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  align-items:center;
+  gap:12px;
+}
+
+.cost-box .stat-row span{
+  line-height:1.25;
+}
+
+.cost-box .stat-row strong{
+  text-align:right;
+  white-space:nowrap;
+}
+
+.monthly-cost-row{
+  padding-left:0;
+  border-left:none;
 }
 
 .hint{
@@ -785,7 +809,11 @@ select:focus{
 }
 
 @media (min-width: 900px){
-  .insights-grid,
+  .insights-grid{
+    grid-template-columns:repeat(3, 1fr);
+    align-items:start;
+  }
+
   .costs-grid{
     grid-template-columns:1fr 1fr;
     align-items:start;
