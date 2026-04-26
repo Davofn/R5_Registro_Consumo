@@ -896,7 +896,7 @@ document.addEventListener("DOMContentLoaded", () => {
       return `
         <div class="stat-row monthly-detail-row">
           <span>${formatMonthLabel(month.monthKey)}</span>
-          <strong>${Number.isFinite(month.avg) ? formatAvg(month.avg) : "—"} · ${formatKm(month.km)}</strong>
+          <strong>${Number.isFinite(month.avg) ? formatAvg(month.avg) : "—"}<br>${formatKm(month.km)}</strong>
         </div>
       `;
     }
