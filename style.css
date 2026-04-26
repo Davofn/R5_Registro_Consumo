@@ -976,3 +976,35 @@ select:focus{
 #tab-costs .costs-grid > .panel-card:nth-child(2) .costs-split-grid {
   flex: 1;
 }
+/* Insights: más aire general */
+#tab-insights .panel-card {
+  padding: 20px 18px;
+}
+
+#tab-insights .stats-list {
+  gap: 16px;
+}
+
+#tab-insights .stat-row {
+  align-items: start;
+  padding-bottom: 14px;
+}
+/* Consumo por mes: más legible */
+#monthlyInsights .monthly-detail-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 14px;
+  padding-left: 12px;
+}
+
+#monthlyInsights .monthly-detail-row span {
+  line-height: 1.35;
+}
+
+#monthlyInsights .monthly-detail-row strong {
+  text-align: right;
+  line-height: 1.35;
+  white-space: normal;
+  max-width: 170px;
+}
