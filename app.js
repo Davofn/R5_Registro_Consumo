@@ -995,11 +995,14 @@ if (awayAvgDaysEl) awayAvgDaysEl.textContent = formatDays(getAverageGapDays(away
 
     const costPer100 = totalKm > 0 ? (totalCost / totalKm) * 100 : NaN;
     const avgPrice = totalKwh > 0 ? totalCost / totalKwh : NaN;
+    const homeOnlyCostPer100 = totalKm > 0 ? (totalKwh * DEFAULT_HOME_PRICE / totalKm) * 100 : NaN;
 
     if (costsTotalCostEl) costsTotalCostEl.textContent = totalCost > 0 ? formatEuro(totalCost) : "—";
     if (costsTotalKwhEl) costsTotalKwhEl.textContent = totalKwh > 0 ? formatKwh(totalKwh) : "—";
     if (costsPer100El) costsPer100El.textContent = Number.isFinite(costPer100) ? formatEuro(costPer100) : "—";
     if (costsAvgPriceEl) costsAvgPriceEl.textContent = formatPricePerKwh(avgPrice);
+    const costsHomeOnlyPer100El = document.getElementById("costsHomeOnlyPer100");
+    if (costsHomeOnlyPer100El) costsHomeOnlyPer100El.textContent = Number.isFinite(homeOnlyCostPer100) ? formatEuro(homeOnlyCostPer100) : "—";
 
     const homeTrips = trips.filter(t => !t.external);
     const awayTrips = trips.filter(t => !!t.external);
