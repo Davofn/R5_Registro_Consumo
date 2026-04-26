@@ -892,14 +892,19 @@ document.addEventListener("DOMContentLoaded", () => {
     const currentYearMonths = monthEntries.filter(m => m.year === currentYear);
     const previousYears = [...new Set(monthEntries.map(m => m.year).filter(y => y < currentYear))].sort((a, b) => b - a);
 
-    function renderMonthRow(month) {
-      return `
-        <div class="stat-row monthly-detail-row">
-          <span>${formatMonthLabel(month.monthKey)}</span>
-          <strong>${Number.isFinite(month.avg) ? formatAvg(month.avg) : "—"}<br>${formatKm(month.km)}</strong>
-        </div>
-      `;
-    }
+function renderMonthRow(month) {
+  return `
+    <div class="stat-row monthly-detail-row">
+      <span>${formatMonthLabel(month.monthKey)}</span>
+      <strong>
+        <span class="metric-value">${Number.isFinite(month.avg) ? formatNumber(month.avg, 1) : "—"}</span>
+        <span class="metric-unit"> kWh/100 km</span><br>
+        <span class="metric-value">${formatNumber(month.km, 1)}</span>
+        <span class="metric-unit"> km</span>
+      </strong>
+    </div>
+  `;
+}
 
     const currentYearHtml = currentYearMonths.map(renderMonthRow).join("");
 
