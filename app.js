@@ -626,7 +626,6 @@ document.addEventListener("DOMContentLoaded", () => {
     globalAvgEl.textContent = totalKm > 0 ? formatAvgCompact(avg) : "—";
     realRangeEl.textContent = totalKm > 0 ? `${Math.round(range)} km` : "—";
     costPer100El.textContent = totalKm > 0 ? formatEuro(costPer100) : "—";
-    totalKmEl.textContent = totalKm > 0 ? formatKm(totalKm) : "—";
   }
 
   function renderSummary() {
