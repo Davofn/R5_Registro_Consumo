@@ -148,27 +148,6 @@ img{display:block;max-width:100%}
   filter:drop-shadow(0 18px 30px rgba(0,0,0,.45));
 }
 
-.hero-odometer{
-  margin:28px 0 24px;
-  display:flex;
-  flex-direction:column;
-  gap:8px;
-}
-
-.hero-odometer span{
-  color:var(--muted);
-  font-size:16px;
-  display:block;
-}
-
-.hero-odometer strong{
-  display:block;
-  font-size:40px;
-  line-height:1.05;
-  font-weight:800;
-  white-space:nowrap;
-}
-
 .hero-metrics{
   display:grid;
   grid-template-columns:repeat(4, minmax(0, 1fr));
@@ -894,14 +873,6 @@ select:focus{
     font-size:13px;
   }
 
-  .hero-odometer{
-    margin:14px 0 12px;
-    gap:4px;
-  }
-
-  .hero-odometer strong{
-    font-size:30px;
-  }
 
   .hero-metrics{
     grid-template-columns:repeat(2,1fr);
