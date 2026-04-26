@@ -128,18 +128,6 @@ img{display:block;max-width:100%}
   pointer-events:none;
 }
 
-.eyebrow{
-  display:inline-flex;
-  align-items:center;
-  gap:8px;
-  color:var(--accent);
-  font-size:20px;
-  font-weight:800;
-  letter-spacing:.07em;
-  text-transform:uppercase;
-  line-height:1.2;
-}
-
 .hero-top{
   display:flex;
   align-items:flex-start;
@@ -148,17 +136,31 @@ img{display:block;max-width:100%}
   margin-bottom:36px;
 }
 
-.hero-car{
-  width:250px;
-  opacity:.98;
-  filter:drop-shadow(0 22px 34px rgba(0,0,0,.42));
+.hero-top > div:first-child{
+  flex:1;
+  display:flex;
+  justify-content:center;
+}
+
+.eyebrow{
+  display:block;
+  width:100%;
+  text-align:center;
+  color:var(--accent);
+  font-size:30px;
+  font-weight:800;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  line-height:1.15;
   margin-top:4px;
 }
 
-.hero-metrics{
-  display:grid;
-  grid-template-columns:repeat(4, minmax(0, 1fr));
-  gap:16px;
+.hero-car{
+  width:290px;
+  opacity:.98;
+  filter:drop-shadow(0 22px 34px rgba(0,0,0,.42));
+  margin-top:0;
+  margin-left:auto;
 }
 
 .hero-metrics{
@@ -196,8 +198,12 @@ img{display:block;max-width:100%}
   text-align:center;
 }
 
+.metric-card.featured{
+  background:linear-gradient(180deg, rgba(255,212,0,.18), rgba(255,212,0,.08));
+}
+
 .hero-actions{
-  margin-top:18px;
+  margin-top:22px;
 }
 
 .primary,
@@ -799,6 +805,72 @@ select:focus{
   padding-left:10px;
 }
 
+/* Costes: alinear los 2 cuadros superiores */
+#tab-costs .costs-grid > .panel-card:nth-child(1),
+#tab-costs .costs-grid > .panel-card:nth-child(2){
+  height:100%;
+  min-height:308px;
+}
+
+#tab-costs .costs-grid{
+  align-items:stretch;
+}
+
+#tab-costs .costs-grid > .panel-card:nth-child(2){
+  display:flex;
+  flex-direction:column;
+}
+
+#tab-costs .costs-grid > .panel-card:nth-child(2) .costs-split-grid{
+  flex:1;
+}
+
+/* Insights: más aire general */
+#tab-insights .panel-card{
+  padding:20px 18px;
+}
+
+#tab-insights .stats-list{
+  gap:16px;
+}
+
+#tab-insights .stat-row{
+  align-items:start;
+  padding-bottom:14px;
+}
+
+/* Insights: consumo por mes más limpio */
+#monthlyInsights .monthly-detail-row{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  align-items:start;
+  gap:14px;
+  padding-left:0;
+  border-left:none;
+}
+
+#monthlyInsights .monthly-detail-row > span{
+  line-height:1.35;
+}
+
+#monthlyInsights .monthly-detail-row strong{
+  text-align:right;
+  line-height:1.35;
+  white-space:normal;
+  max-width:190px;
+  font-weight:400;
+}
+
+#monthlyInsights .monthly-detail-row .metric-value{
+  font-weight:700;
+  color:var(--text);
+}
+
+#monthlyInsights .monthly-detail-row .metric-unit{
+  font-weight:400;
+  color:var(--muted);
+}
+
 @media (min-width: 900px){
   .insights-grid{
     grid-template-columns:repeat(3, 1fr);
@@ -812,18 +884,48 @@ select:focus{
 }
 
 @media (max-width: 860px){
+  .hero-card{
+    min-height:auto;
+    padding:18px 18px 14px;
+  }
+
   .hero-top{
     flex-direction:column;
+    gap:12px;
+    margin-bottom:16px;
+  }
+
+  .hero-top > div:first-child{
+    justify-content:flex-start;
   }
 
   .hero-car{
-    width:180px;
+    width:190px;
     align-self:flex-end;
+  }
+
+  .eyebrow{
+    font-size:18px;
+    text-align:left;
   }
 
   .hero-metrics,
   .computed-grid{
     grid-template-columns:repeat(2,1fr);
+  }
+
+  .metric-card{
+    min-height:88px;
+    padding:14px 12px;
+  }
+
+  .metric-card span{
+    font-size:0.8rem;
+    margin-bottom:4px;
+  }
+
+  .metric-card strong{
+    font-size:1.9rem;
   }
 
   .summary-grid{
@@ -834,37 +936,7 @@ select:focus{
     grid-column:auto;
   }
 }
-.hero-card{
-  min-height:auto;
-  padding:18px 18px 14px;
-}
 
-.hero-top{
-  gap:12px;
-  margin-bottom:16px;
-}
-
-.hero-car{
-  width:180px;
-}
-
-.eyebrow{
-  font-size:15px;
-}
-
-.metric-card{
-  min-height:88px;
-  padding:14px 12px;
-}
-
-.metric-card span{
-  font-size:0.8rem;
-  margin-bottom:4px;
-}
-
-.metric-card strong{
-  font-size:1.9rem;
-}
 @media (max-width: 768px){
   .hero-metrics{
     grid-template-columns:repeat(2, minmax(0, 1fr));
@@ -914,7 +986,6 @@ select:focus{
   .eyebrow{
     font-size:13px;
   }
-
 
   .hero-metrics{
     grid-template-columns:repeat(2,1fr);
@@ -970,66 +1041,4 @@ select:focus{
     padding:10px 6px;
     font-size:13px;
   }
-}
-/* Costes: alinear los 2 cuadros superiores */
-#tab-costs .costs-grid > .panel-card:nth-child(1),
-#tab-costs .costs-grid > .panel-card:nth-child(2) {
-  height: 100%;
-  min-height: 308px;
-}
-
-#tab-costs .costs-grid {
-  align-items: stretch;
-}
-#tab-costs .costs-grid > .panel-card:nth-child(2) {
-  display: flex;
-  flex-direction: column;
-}
-
-#tab-costs .costs-grid > .panel-card:nth-child(2) .costs-split-grid {
-  flex: 1;
-}
-/* Insights: más aire general */
-#tab-insights .panel-card {
-  padding: 20px 18px;
-}
-
-#tab-insights .stats-list {
-  gap: 16px;
-}
-
-#tab-insights .stat-row {
-  align-items: start;
-  padding-bottom: 14px;
-}
-/* Insights: consumo por mes más limpio */
-#monthlyInsights .monthly-detail-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: start;
-  gap: 14px;
-  padding-left: 0;
-  border-left: none;
-}
-
-#monthlyInsights .monthly-detail-row > span {
-  line-height: 1.35;
-}
-
-#monthlyInsights .monthly-detail-row strong {
-  text-align: right;
-  line-height: 1.35;
-  white-space: normal;
-  max-width: 190px;
-  font-weight: 400;
-}
-
-#monthlyInsights .monthly-detail-row .metric-value {
-  font-weight: 700;
-  color: var(--text);
-}
-
-#monthlyInsights .monthly-detail-row .metric-unit {
-  font-weight: 400;
-  color: var(--muted);
 }
