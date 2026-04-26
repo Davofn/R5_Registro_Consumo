@@ -989,16 +989,17 @@ select:focus{
   align-items: start;
   padding-bottom: 14px;
 }
-/* Consumo por mes: más legible */
+/* Insights: consumo por mes más limpio */
 #monthlyInsights .monthly-detail-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: start;
   gap: 14px;
-  padding-left: 12px;
+  padding-left: 0;
+  border-left: none;
 }
 
-#monthlyInsights .monthly-detail-row span {
+#monthlyInsights .monthly-detail-row > span {
   line-height: 1.35;
 }
 
@@ -1006,5 +1007,16 @@ select:focus{
   text-align: right;
   line-height: 1.35;
   white-space: normal;
-  max-width: 170px;
+  max-width: 190px;
+  font-weight: 400;
+}
+
+#monthlyInsights .monthly-detail-row .metric-value {
+  font-weight: 700;
+  color: var(--text);
+}
+
+#monthlyInsights .monthly-detail-row .metric-unit {
+  font-weight: 400;
+  color: var(--muted);
 }
