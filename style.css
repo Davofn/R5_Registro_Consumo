@@ -958,3 +958,21 @@ select:focus{
     font-size:13px;
   }
 }
+/* Costes: alinear los 2 cuadros superiores */
+#tab-costs .costs-grid > .panel-card:nth-child(1),
+#tab-costs .costs-grid > .panel-card:nth-child(2) {
+  height: 100%;
+  min-height: 308px;
+}
+
+#tab-costs .costs-grid {
+  align-items: stretch;
+}
+#tab-costs .costs-grid > .panel-card:nth-child(2) {
+  display: flex;
+  flex-direction: column;
+}
+
+#tab-costs .costs-grid > .panel-card:nth-child(2) .costs-split-grid {
+  flex: 1;
+}
