@@ -468,35 +468,67 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  function renderVehicleStatus(data, fallbackText = "Datos del coche no disponibles") {
-    if (!vehicleStatusBarEl) return;
+function renderVehicleStatus(data, fallbackText = "Datos del coche no disponibles") {
+  if (!vehicleStatusBarEl) return;
 
-    if (!data) {
-      vehicleStatusBarEl.textContent = fallbackText;
-      vehicleStatusBarEl.classList.add("muted");
-      return;
-    }
+  if (!data) {
+    vehicleStatusBarEl.innerHTML = `
+      <article class="vehicle-status-card">
+        <span>Batería actual</span>
+        <strong>—</strong>
+      </article>
 
-    const batteryText = Number.isFinite(Number(data.soc))
-      ? `Batería: ${Number(data.soc)}%`
-      : "Batería: —";
+      <article class="vehicle-status-card">
+        <span>Autonomía real</span>
+        <strong>—</strong>
+      </article>
 
-    const rangeText = Number.isFinite(Number(data.rangeKm))
-      ? `Autonomía actual: ${Number(data.rangeKm)} km`
-      : "Autonomía actual: —";
+      <article class="vehicle-status-card status-wide">
+        <span>Estado</span>
+        <strong>${fallbackText}</strong>
+      </article>
+    `;
 
-    const statusParts = [
-      data.plugLabel,
-      data.chargingLabel
-    ].filter(Boolean);
-
-    const statusText = statusParts.length
-      ? `Estado: ${statusParts.join(" · ")}`
-      : "Estado: —";
-
-    vehicleStatusBarEl.textContent = `${batteryText} · ${rangeText} · ${statusText}`;
-    vehicleStatusBarEl.classList.remove("muted");
+    vehicleStatusBarEl.classList.add("muted");
+    return;
   }
+
+  const batteryText = Number.isFinite(Number(data.soc))
+    ? `${Number(data.soc)}%`
+    : "—";
+
+  const rangeText = Number.isFinite(Number(data.rangeKm))
+    ? `${Number(data.rangeKm)} km`
+    : "—";
+
+  const statusParts = [
+    data.plugLabel,
+    data.chargingLabel
+  ].filter(Boolean);
+
+  const statusText = statusParts.length
+    ? statusParts.join(" · ")
+    : "—";
+
+  vehicleStatusBarEl.innerHTML = `
+    <article class="vehicle-status-card">
+      <span>Batería actual</span>
+      <strong>${batteryText}</strong>
+    </article>
+
+    <article class="vehicle-status-card">
+      <span>Autonomía real</span>
+      <strong>${rangeText}</strong>
+    </article>
+
+    <article class="vehicle-status-card status-wide">
+      <span>Estado</span>
+      <strong>${statusText}</strong>
+    </article>
+  `;
+
+  vehicleStatusBarEl.classList.remove("muted");
+}
 
   async function fetchVehicleStatus() {
     if (!vehicleStatusBarEl) return;
