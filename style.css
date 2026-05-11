@@ -288,6 +288,30 @@ img{display:block;max-width:100%}
   display:block;
 }
 
+.period-toolbar{
+  display:grid;
+  grid-template-columns:repeat(2, minmax(0, 180px));
+  gap:12px;
+  margin-bottom:16px;
+  padding:14px;
+  border:1px solid var(--line);
+  border-radius:20px;
+  background:rgba(255,255,255,.03);
+}
+
+.period-toolbar label{
+  gap:6px;
+}
+
+.period-toolbar label span{
+  font-size:12px;
+}
+
+.period-toolbar select{
+  padding:11px 12px;
+  border-radius:14px;
+}
+
 .summary-grid{
   display:grid;
   grid-template-columns:repeat(2,1fr);
@@ -836,7 +860,6 @@ select:focus{
 
 #tab-insights .stat-row{
   align-items:start;
-  padding-bottom:14px;
 }
 
 /* Insights: consumo por mes más limpio */
@@ -1013,6 +1036,12 @@ select:focus{
   .cta{
     padding:13px 16px;
     font-size:15px;
+  }
+
+  .period-toolbar{
+    grid-template-columns:1fr 1fr;
+    padding:12px;
+    gap:10px;
   }
 
   .filters-grid,
