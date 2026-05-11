@@ -18,7 +18,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const globalAvgEl = document.getElementById("globalAvg");
   const realRangeEl = document.getElementById("realRange");
   const costPer100El = document.getElementById("costPer100");
-  const totalKmEl = document.getElementById("totalKm");
 
   // SUMMARY
   const totalKwhEl = document.getElementById("totalKwh");
@@ -49,6 +48,11 @@ document.addEventListener("DOMContentLoaded", () => {
   const awaySessionsEl = document.getElementById("awaySessions");
   const awayAvgDaysEl = document.getElementById("awayAvgDays");
   const monthlyCostsEl = document.getElementById("monthlyCosts");
+
+  const insightsYearFilterEl = document.getElementById("insightsYearFilter");
+  const insightsMonthFilterEl = document.getElementById("insightsMonthFilter");
+  const costsYearFilterEl = document.getElementById("costsYearFilter");
+  const costsMonthFilterEl = document.getElementById("costsMonthFilter");
 
   // MODAL
   const tripModal = document.getElementById("tripModal");
@@ -193,6 +197,12 @@ document.addEventListener("DOMContentLoaded", () => {
     return Number(y);
   }
 
+  function getMonthFromDate(dateStr) {
+    if (!dateStr) return NaN;
+    const [, m] = dateStr.split("/").map(Number);
+    return m;
+  }
+
   function getMonthKeyFromDate(dateStr) {
     const [, m, y] = dateStr.split("/");
     return `${y}-${m}`;
@@ -207,15 +217,75 @@ document.addEventListener("DOMContentLoaded", () => {
     return `${monthNames[Number(month) - 1]} ${year}`;
   }
 
-  function getCurrentAppYear() {
-    if (!trips.length) return new Date().getFullYear();
+  function getCurrentAppYear(arr = trips) {
+    if (!arr.length) return new Date().getFullYear();
 
-    const years = trips
+    const years = arr
       .filter(t => t.date)
       .map(t => getYearFromDate(t.date))
       .filter(Number.isFinite);
 
     return years.length ? Math.max(...years) : new Date().getFullYear();
+  }
+
+  function passesPeriodFilter(dateStr, yearValue, monthValue) {
+    if (!dateStr) return false;
+
+    const year = getYearFromDate(dateStr);
+    const month = getMonthFromDate(dateStr);
+
+    if (yearValue && yearValue !== "Todos" && year !== Number(yearValue)) return false;
+    if (monthValue && monthValue !== "Todos" && month !== Number(monthValue)) return false;
+
+    return true;
+  }
+
+  function filterByPeriod(arr, yearEl, monthEl) {
+    const yearValue = yearEl?.value || "Todos";
+    const monthValue = monthEl?.value || "Todos";
+
+    return arr.filter(item => passesPeriodFilter(item.date, yearValue, monthValue));
+  }
+
+  function getAvailableYears(arr = trips) {
+    return [...new Set(
+      arr
+        .filter(t => t.date)
+        .map(t => getYearFromDate(t.date))
+        .filter(Number.isFinite)
+    )].sort((a, b) => b - a);
+  }
+
+  function populateYearSelect(selectEl) {
+    if (!selectEl) return;
+
+    const previousValue = selectEl.value;
+    const years = getAvailableYears();
+    const defaultYear = years.length ? String(years[0]) : String(new Date().getFullYear());
+
+    selectEl.innerHTML = `
+      <option value="Todos">Todo el histórico</option>
+      ${years.map(year => `<option value="${year}">${year}</option>`).join("")}
+    `;
+
+    if (previousValue && [...selectEl.options].some(option => option.value === previousValue)) {
+      selectEl.value = previousValue;
+    } else {
+      selectEl.value = defaultYear;
+    }
+  }
+
+  function populatePeriodFilters() {
+    populateYearSelect(insightsYearFilterEl);
+    populateYearSelect(costsYearFilterEl);
+
+    if (insightsMonthFilterEl && !insightsMonthFilterEl.value) {
+      insightsMonthFilterEl.value = "Todos";
+    }
+
+    if (costsMonthFilterEl && !costsMonthFilterEl.value) {
+      costsMonthFilterEl.value = "Todos";
+    }
   }
 
   function sortTrips(a, b) {
@@ -704,40 +774,40 @@ document.addEventListener("DOMContentLoaded", () => {
       if (trip.tripType === GHOST_TYPE) typeClass = "type-ghost";
 
       return `
-  <div class="trip-detail-row">
-    <div class="trip-detail-line1">
-      <div class="trip-detail-line1-left">
-        <span class="trip-detail-date">${trip.date}</span>
-        <span class="type-chip ${typeClass}">${trip.tripType}</span>
-        <span class="trip-detail-soc">🔋 ${trip.socStart}% → ${trip.socEnd}%</span>
-      </div>
+        <div class="trip-detail-row">
+          <div class="trip-detail-line1">
+            <div class="trip-detail-line1-left">
+              <span class="trip-detail-date">${trip.date}</span>
+              <span class="type-chip ${typeClass}">${trip.tripType}</span>
+              <span class="trip-detail-soc">🔋 ${trip.socStart}% → ${trip.socEnd}%</span>
+            </div>
 
-      <div class="trip-detail-actions">
-        <button
-          class="ghost trip-edit-btn"
-          data-trip-id="${trip.id}"
-          aria-label="Editar trayecto"
-          title="Editar trayecto"
-        >✏️</button>
+            <div class="trip-detail-actions">
+              <button
+                class="ghost trip-edit-btn"
+                data-trip-id="${trip.id}"
+                aria-label="Editar trayecto"
+                title="Editar trayecto"
+              >✏️</button>
 
-        <button
-          class="ghost trip-delete-btn"
-          data-trip-id="${trip.id}"
-          aria-label="Eliminar trayecto"
-          title="Eliminar trayecto"
-        >🗑️</button>
-      </div>
-    </div>
-    <div class="trip-detail-line2">
-      <span>${formatKm(trip.kmTrip)}</span>
-      <span>${Number.isFinite(trip.avg) && trip.avg > 0 ? formatAvg(trip.avg) : "—"}<small>${Number.isFinite(trip.avg) && trip.avg > 0 ? "/100km" : ""}</small></span>
-      <span>${climaIcon} <small>clima</small></span>
-      <span>${asientosIcon} <small>asientos</small></span>
-      <span>${formatEuro(trip.cost)}</span>
-    </div>
-    ${trip.notes ? `<div class="trip-detail-notes">${trip.notes}</div>` : ""}
-  </div>
-`;
+              <button
+                class="ghost trip-delete-btn"
+                data-trip-id="${trip.id}"
+                aria-label="Eliminar trayecto"
+                title="Eliminar trayecto"
+              >🗑️</button>
+            </div>
+          </div>
+          <div class="trip-detail-line2">
+            <span>${formatKm(trip.kmTrip)}</span>
+            <span>${Number.isFinite(trip.avg) && trip.avg > 0 ? formatAvg(trip.avg) : "—"}<small>${Number.isFinite(trip.avg) && trip.avg > 0 ? "/100km" : ""}</small></span>
+            <span>${climaIcon} <small>clima</small></span>
+            <span>${asientosIcon} <small>asientos</small></span>
+            <span>${formatEuro(trip.cost)}</span>
+          </div>
+          ${trip.notes ? `<div class="trip-detail-notes">${trip.notes}</div>` : ""}
+        </div>
+      `;
     }).join("");
 
     const dateRange = summary.startDate === summary.endDate
@@ -799,6 +869,7 @@ document.addEventListener("DOMContentLoaded", () => {
         try {
           await deleteTripFromSupabase(trip.id);
           trips = await fetchTripsFromSupabase();
+          populatePeriodFilters();
           renderAll();
           showMsg("Trayecto eliminado.");
         } catch (err) {
@@ -857,7 +928,8 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function renderInsights() {
-    const drivingTrips = getDrivingTrips(trips);
+    const scopedTrips = filterByPeriod(trips, insightsYearFilterEl, insightsMonthFilterEl);
+    const drivingTrips = getDrivingTrips(scopedTrips);
 
     const monthMap = new Map();
 
@@ -889,22 +961,22 @@ document.addEventListener("DOMContentLoaded", () => {
       }))
       .sort((a, b) => b.monthKey.localeCompare(a.monthKey));
 
-    const currentYear = getCurrentAppYear();
+    const currentYear = getCurrentAppYear(scopedTrips);
     const currentYearMonths = monthEntries.filter(m => m.year === currentYear);
     const previousYears = [...new Set(monthEntries.map(m => m.year).filter(y => y < currentYear))].sort((a, b) => b - a);
 
     function renderMonthRow(month) {
       return `
-    <div class="stat-row monthly-detail-row">
-      <span>${formatMonthLabel(month.monthKey)}</span>
-      <strong>
-        <span class="metric-value">${Number.isFinite(month.avg) ? formatNumber(month.avg, 1) : "—"}</span>
-        <span class="metric-unit"> kWh/100 km</span><br>
-        <span class="metric-value">${formatNumber(month.km, 1)}</span>
-        <span class="metric-unit"> km</span>
-      </strong>
-    </div>
-  `;
+        <div class="stat-row monthly-detail-row">
+          <span>${formatMonthLabel(month.monthKey)}</span>
+          <strong>
+            <span class="metric-value">${Number.isFinite(month.avg) ? formatNumber(month.avg, 1) : "—"}</span>
+            <span class="metric-unit"> kWh/100 km</span><br>
+            <span class="metric-value">${formatNumber(month.km, 1)}</span>
+            <span class="metric-unit"> km</span>
+          </strong>
+        </div>
+      `;
     }
 
     const currentYearHtml = currentYearMonths.map(renderMonthRow).join("");
@@ -932,7 +1004,7 @@ document.addEventListener("DOMContentLoaded", () => {
     monthlyInsightsEl.innerHTML =
       (currentYearHtml || previousYearsHtml)
         ? `${currentYearHtml}${previousYearsHtml}`
-        : `<div class="stat-row"><span>Sin datos</span><strong>—</strong></div>`;
+        : `<div class="stat-row"><span>Sin datos para este periodo</span><strong>—</strong></div>`;
 
     monthlyInsightsEl.querySelectorAll(".year-summary-toggle").forEach(btn => {
       btn.addEventListener("click", () => {
@@ -984,7 +1056,12 @@ document.addEventListener("DOMContentLoaded", () => {
       ${renderTypeLine(typeStats.find(t => t.name === "Autopista"))}
     `;
 
-    const chargeEvents = getInferredChargeEvents(trips);
+    const chargeEvents = filterByPeriod(
+      getInferredChargeEvents(trips),
+      insightsYearFilterEl,
+      insightsMonthFilterEl
+    );
+
     const homeChargeEvents = chargeEvents.filter(e => !e.external);
     const awayChargeEvents = chargeEvents.filter(e => e.external);
 
@@ -995,10 +1072,12 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function renderCosts() {
-    const drivingTrips = getDrivingTrips(trips);
+    const scopedTrips = filterByPeriod(trips, costsYearFilterEl, costsMonthFilterEl);
+    const drivingTrips = getDrivingTrips(scopedTrips);
+
     const totalKm = drivingTrips.reduce((sum, t) => sum + t.kmTrip, 0);
-    const totalKwh = trips.reduce((sum, t) => sum + t.kwhUsed, 0);
-    const totalCost = trips.reduce((sum, t) => sum + t.cost, 0);
+    const totalKwh = scopedTrips.reduce((sum, t) => sum + t.kwhUsed, 0);
+    const totalCost = scopedTrips.reduce((sum, t) => sum + t.cost, 0);
     const totalDrivingCost = drivingTrips.reduce((sum, t) => sum + t.cost, 0);
     const totalDrivingKwh = drivingTrips.reduce((sum, t) => sum + t.kwhUsed, 0);
 
@@ -1016,8 +1095,8 @@ document.addEventListener("DOMContentLoaded", () => {
       costsHomeOnlyPer100El.textContent = Number.isFinite(homeOnlyCostPer100) ? formatEuro(homeOnlyCostPer100) : "—";
     }
 
-    const homeTrips = trips.filter(t => !t.external);
-    const awayTrips = trips.filter(t => !!t.external);
+    const homeTrips = scopedTrips.filter(t => !t.external);
+    const awayTrips = scopedTrips.filter(t => !!t.external);
 
     const homeKwh = homeTrips.reduce((sum, t) => sum + t.kwhUsed, 0);
     const homeCost = homeTrips.reduce((sum, t) => sum + t.cost, 0);
@@ -1063,7 +1142,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const monthMap = new Map();
 
-    trips.forEach(trip => {
+    scopedTrips.forEach(trip => {
       if (!trip.date) return;
       const monthKey = getMonthKeyFromDate(trip.date);
 
@@ -1089,17 +1168,17 @@ document.addEventListener("DOMContentLoaded", () => {
       }))
       .sort((a, b) => b.monthKey.localeCompare(a.monthKey));
 
-    const currentYear = getCurrentAppYear();
+    const currentYear = getCurrentAppYear(scopedTrips);
     const currentYearMonths = monthEntries.filter(m => m.year === currentYear);
     const previousYears = [...new Set(monthEntries.map(m => m.year).filter(y => y < currentYear))].sort((a, b) => b - a);
 
     function renderCostMonthRow(month) {
       return `
-    <div class="stat-row monthly-cost-row">
-      <span>${formatMonthLabel(month.monthKey)}</span>
-      <strong>${formatKwh(month.kwh)} · ${formatEuro(month.cost)}</strong>
-    </div>
-  `;
+        <div class="stat-row monthly-cost-row">
+          <span>${formatMonthLabel(month.monthKey)}</span>
+          <strong>${formatKwh(month.kwh)} · ${formatEuro(month.cost)}</strong>
+        </div>
+      `;
     }
 
     const currentYearHtml = currentYearMonths.map(renderCostMonthRow).join("");
@@ -1127,7 +1206,7 @@ document.addEventListener("DOMContentLoaded", () => {
       monthlyCostsEl.innerHTML =
         (currentYearHtml || previousYearsHtml)
           ? `${currentYearHtml}${previousYearsHtml}`
-          : `<div class="stat-row"><span>Sin datos</span><strong>—</strong></div>`;
+          : `<div class="stat-row"><span>Sin datos para este periodo</span><strong>—</strong></div>`;
 
       monthlyCostsEl.querySelectorAll(".year-summary-toggle").forEach(btn => {
         btn.addEventListener("click", () => {
@@ -1259,6 +1338,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       trips = await fetchTripsFromSupabase();
+      populatePeriodFilters();
       closeModal();
       clearForm();
       renderAll();
@@ -1276,6 +1356,15 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   [filterTypeEl, filterExtrasEl].forEach(el => {
+    el.addEventListener("change", renderAll);
+  });
+
+  [
+    insightsYearFilterEl,
+    insightsMonthFilterEl,
+    costsYearFilterEl,
+    costsMonthFilterEl
+  ].filter(Boolean).forEach(el => {
     el.addEventListener("change", renderAll);
   });
 
@@ -1301,6 +1390,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     try {
       trips = await fetchTripsFromSupabase();
+      populatePeriodFilters();
       renderAll();
       showMsg(`Cargados ${trips.length} trayectos desde Supabase.`);
     } catch (err) {
