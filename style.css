@@ -20,7 +20,7 @@
   --radius-lg:22px;
   --radius-md:18px;
   --radius-sm:14px;
-  --container:1000px;
+  --container:1200px;
   font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
 }
 
@@ -351,6 +351,8 @@ img{display:block;max-width:100%}
 
 .hero-actions{
   margin-top:18px;
+   display:flex;
+  justify-content:center;
 }
 
 .primary,
@@ -381,9 +383,9 @@ img{display:block;max-width:100%}
 }
 
 .cta{
-  width:100%;
+  width:min(420px, 100%);
   font-size:16px;
-  padding:16px 20px;
+  padding:15px 22px;
   border-radius:20px;
 }
 
@@ -438,6 +440,7 @@ img{display:block;max-width:100%}
 .period-toolbar{
   display:grid;
   grid-template-columns:repeat(2, minmax(0, 180px));
+  justify-content:center;
   gap:12px;
   margin-bottom:16px;
   padding:14px;
@@ -1296,11 +1299,12 @@ select:focus{
     font-size:15px;
   }
 
-  .period-toolbar{
-    grid-template-columns:1fr 1fr;
-    padding:12px;
-    gap:10px;
-  }
+.period-toolbar{
+  grid-template-columns:1fr 1fr;
+  justify-content:stretch;
+  padding:12px;
+  gap:10px;
+}
 
   .filters-grid,
   .quick-grid,
