@@ -9,7 +9,7 @@ document.addEventListener("DOMContentLoaded", () => {
   let editingTripId = null;
 
   const BATTERY_KWH = 52;
-  const DEFAULT_HOME_PRICE = 0.1176;
+  const DEFAULT_HOME_PRICE = 0.117681;
   const DEFAULT_EXTERNAL_PRICE = 0.45;
   const GHOST_TYPE = "Consumo fantasma";
 
@@ -37,10 +37,12 @@ document.addEventListener("DOMContentLoaded", () => {
   const homeKwhEl = document.getElementById("homeKwh");
   const homeCostEl = document.getElementById("homeCost");
   const homeAvgPriceEl = document.getElementById("homeAvgPrice");
+  const homePer100El = document.getElementById("homePer100");
   const homeEnergyPctEl = document.getElementById("homeEnergyPct");
   const awayKwhEl = document.getElementById("awayKwh");
   const awayCostEl = document.getElementById("awayCost");
   const awayAvgPriceEl = document.getElementById("awayAvgPrice");
+  const awayPer100El = document.getElementById("awayPer100");
   const awayEnergyPctEl = document.getElementById("awayEnergyPct");
   const homeSessionsEl = document.getElementById("homeSessions");
   const homeAvgDaysEl = document.getElementById("homeAvgDays");
@@ -615,12 +617,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const totalKm = drivingTrips.reduce((sum, t) => sum + t.kmTrip, 0);
     const totalDrivingKwh = drivingTrips.reduce((sum, t) => sum + t.kwhUsed, 0);
-    const totalCost = trips.reduce((sum, t) => sum + t.cost, 0);
+    const totalDrivingCost = drivingTrips.reduce((sum, t) => sum + t.cost, 0);
 
     const avg = safeAvg(totalDrivingKwh, totalKm);
     const range = avg > 0 ? (BATTERY_KWH / avg) * 100 : 0;
     const lastOdo = trips.length ? [...trips].sort(sortTrips)[trips.length - 1].kmEnd : 0;
-    const costPer100 = totalKm > 0 ? (totalCost / totalKm) * 100 : 0;
+    const costPer100 = totalKm > 0 ? (totalDrivingCost / totalKm) * 100 : 0;
 
     odoNowEl.textContent = trips.length ? `${formatNumber(lastOdo, 1)} km` : "—";
     globalAvgEl.textContent = totalKm > 0 ? formatAvgCompact(avg) : "—";
@@ -891,8 +893,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const currentYearMonths = monthEntries.filter(m => m.year === currentYear);
     const previousYears = [...new Set(monthEntries.map(m => m.year).filter(y => y < currentYear))].sort((a, b) => b - a);
 
-function renderMonthRow(month) {
-  return `
+    function renderMonthRow(month) {
+      return `
     <div class="stat-row monthly-detail-row">
       <span>${formatMonthLabel(month.monthKey)}</span>
       <strong>
@@ -903,7 +905,7 @@ function renderMonthRow(month) {
       </strong>
     </div>
   `;
-}
+    }
 
     const currentYearHtml = currentYearMonths.map(renderMonthRow).join("");
 
@@ -981,14 +983,15 @@ function renderMonthRow(month) {
       ${renderTypeLine(typeStats.find(t => t.name === "Mixto"))}
       ${renderTypeLine(typeStats.find(t => t.name === "Autopista"))}
     `;
-    const chargeEvents = getInferredChargeEvents(trips);
-const homeChargeEvents = chargeEvents.filter(e => !e.external);
-const awayChargeEvents = chargeEvents.filter(e => e.external);
 
-if (homeSessionsEl) homeSessionsEl.textContent = String(homeChargeEvents.length);
-if (awaySessionsEl) awaySessionsEl.textContent = String(awayChargeEvents.length);
-if (homeAvgDaysEl) homeAvgDaysEl.textContent = formatDays(getAverageGapDays(homeChargeEvents));
-if (awayAvgDaysEl) awayAvgDaysEl.textContent = formatDays(getAverageGapDays(awayChargeEvents));
+    const chargeEvents = getInferredChargeEvents(trips);
+    const homeChargeEvents = chargeEvents.filter(e => !e.external);
+    const awayChargeEvents = chargeEvents.filter(e => e.external);
+
+    if (homeSessionsEl) homeSessionsEl.textContent = String(homeChargeEvents.length);
+    if (awaySessionsEl) awaySessionsEl.textContent = String(awayChargeEvents.length);
+    if (homeAvgDaysEl) homeAvgDaysEl.textContent = formatDays(getAverageGapDays(homeChargeEvents));
+    if (awayAvgDaysEl) awayAvgDaysEl.textContent = formatDays(getAverageGapDays(awayChargeEvents));
   }
 
   function renderCosts() {
@@ -996,17 +999,22 @@ if (awayAvgDaysEl) awayAvgDaysEl.textContent = formatDays(getAverageGapDays(away
     const totalKm = drivingTrips.reduce((sum, t) => sum + t.kmTrip, 0);
     const totalKwh = trips.reduce((sum, t) => sum + t.kwhUsed, 0);
     const totalCost = trips.reduce((sum, t) => sum + t.cost, 0);
+    const totalDrivingCost = drivingTrips.reduce((sum, t) => sum + t.cost, 0);
+    const totalDrivingKwh = drivingTrips.reduce((sum, t) => sum + t.kwhUsed, 0);
 
-    const costPer100 = totalKm > 0 ? (totalCost / totalKm) * 100 : NaN;
+    const costPer100 = totalKm > 0 ? (totalDrivingCost / totalKm) * 100 : NaN;
     const avgPrice = totalKwh > 0 ? totalCost / totalKwh : NaN;
-    const homeOnlyCostPer100 = totalKm > 0 ? (totalKwh * DEFAULT_HOME_PRICE / totalKm) * 100 : NaN;
+    const homeOnlyCostPer100 = totalKm > 0 ? (totalDrivingKwh * DEFAULT_HOME_PRICE / totalKm) * 100 : NaN;
 
     if (costsTotalCostEl) costsTotalCostEl.textContent = totalCost > 0 ? formatEuro(totalCost) : "—";
     if (costsTotalKwhEl) costsTotalKwhEl.textContent = totalKwh > 0 ? formatKwh(totalKwh) : "—";
     if (costsPer100El) costsPer100El.textContent = Number.isFinite(costPer100) ? formatEuro(costPer100) : "—";
     if (costsAvgPriceEl) costsAvgPriceEl.textContent = formatPricePerKwh(avgPrice);
+
     const costsHomeOnlyPer100El = document.getElementById("costsHomeOnlyPer100");
-    if (costsHomeOnlyPer100El) costsHomeOnlyPer100El.textContent = Number.isFinite(homeOnlyCostPer100) ? formatEuro(homeOnlyCostPer100) : "—";
+    if (costsHomeOnlyPer100El) {
+      costsHomeOnlyPer100El.textContent = Number.isFinite(homeOnlyCostPer100) ? formatEuro(homeOnlyCostPer100) : "—";
+    }
 
     const homeTrips = trips.filter(t => !t.external);
     const awayTrips = trips.filter(t => !!t.external);
@@ -1019,17 +1027,38 @@ if (awayAvgDaysEl) awayAvgDaysEl.textContent = formatDays(getAverageGapDays(away
     const homeAvgPrice = homeKwh > 0 ? homeCost / homeKwh : NaN;
     const awayAvgPrice = awayKwh > 0 ? awayCost / awayKwh : NaN;
 
+    const homeDrivingKm = homeTrips
+      .filter(t => !isGhostTrip(t))
+      .reduce((sum, t) => sum + t.kmTrip, 0);
+
+    const awayDrivingKm = awayTrips
+      .filter(t => !isGhostTrip(t))
+      .reduce((sum, t) => sum + t.kmTrip, 0);
+
+    const homeDrivingCost = homeTrips
+      .filter(t => !isGhostTrip(t))
+      .reduce((sum, t) => sum + t.cost, 0);
+
+    const awayDrivingCost = awayTrips
+      .filter(t => !isGhostTrip(t))
+      .reduce((sum, t) => sum + t.cost, 0);
+
+    const homePer100 = homeDrivingKm > 0 ? (homeDrivingCost / homeDrivingKm) * 100 : NaN;
+    const awayPer100 = awayDrivingKm > 0 ? (awayDrivingCost / awayDrivingKm) * 100 : NaN;
+
     const homeEnergyPct = totalKwh > 0 ? (homeKwh / totalKwh) * 100 : NaN;
     const awayEnergyPct = totalKwh > 0 ? (awayKwh / totalKwh) * 100 : NaN;
 
     if (homeKwhEl) homeKwhEl.textContent = homeKwh > 0 ? formatKwh(homeKwh) : "—";
     if (homeCostEl) homeCostEl.textContent = homeCost > 0 ? formatEuro(homeCost) : "—";
     if (homeAvgPriceEl) homeAvgPriceEl.textContent = formatPricePerKwh(homeAvgPrice);
+    if (homePer100El) homePer100El.textContent = Number.isFinite(homePer100) ? formatEuro(homePer100) : "—";
     if (homeEnergyPctEl) homeEnergyPctEl.textContent = formatPercent(homeEnergyPct);
 
     if (awayKwhEl) awayKwhEl.textContent = awayKwh > 0 ? formatKwh(awayKwh) : "—";
     if (awayCostEl) awayCostEl.textContent = awayCost > 0 ? formatEuro(awayCost) : "—";
     if (awayAvgPriceEl) awayAvgPriceEl.textContent = formatPricePerKwh(awayAvgPrice);
+    if (awayPer100El) awayPer100El.textContent = Number.isFinite(awayPer100) ? formatEuro(awayPer100) : "—";
     if (awayEnergyPctEl) awayEnergyPctEl.textContent = formatPercent(awayEnergyPct);
 
     const monthMap = new Map();
@@ -1064,14 +1093,14 @@ if (awayAvgDaysEl) awayAvgDaysEl.textContent = formatDays(getAverageGapDays(away
     const currentYearMonths = monthEntries.filter(m => m.year === currentYear);
     const previousYears = [...new Set(monthEntries.map(m => m.year).filter(y => y < currentYear))].sort((a, b) => b - a);
 
- function renderCostMonthRow(month) {
-  return `
+    function renderCostMonthRow(month) {
+      return `
     <div class="stat-row monthly-cost-row">
       <span>${formatMonthLabel(month.monthKey)}</span>
       <strong>${formatKwh(month.kwh)} · ${formatEuro(month.cost)}</strong>
     </div>
   `;
-}
+    }
 
     const currentYearHtml = currentYearMonths.map(renderCostMonthRow).join("");
 
