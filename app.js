@@ -7,11 +7,24 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 document.addEventListener("DOMContentLoaded", () => {
   let trips = [];
   let editingTripId = null;
+  let currentUser = null;
 
   const BATTERY_KWH = 52;
   const DEFAULT_HOME_PRICE = 0.117681;
   const DEFAULT_EXTERNAL_PRICE = 0.45;
   const GHOST_TYPE = "Consumo fantasma";
+
+  // AUTH
+  const authView = document.getElementById("authView");
+  const appHeader = document.getElementById("appHeader");
+  const appMain = document.getElementById("appMain");
+  const appFooter = document.getElementById("appFooter");
+  const authEmailEl = document.getElementById("authEmail");
+  const authPasswordEl = document.getElementById("authPassword");
+  const loginBtn = document.getElementById("loginBtn");
+  const logoutBtn = document.getElementById("logoutBtn");
+  const authMsgEl = document.getElementById("authMsg");
+  const sessionEmailEl = document.getElementById("sessionEmail");
 
   // HERO
   const odoNowEl = document.getElementById("odoNow");
@@ -101,6 +114,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const panels = document.querySelectorAll(".tab-panel");
 
   const required = [
+    authView, appHeader, appMain, appFooter, authEmailEl, authPasswordEl,
+    loginBtn, logoutBtn, authMsgEl, sessionEmailEl,
     tripModal, openTripModalBtn, closeTripModalBtn, closeTripModalBackdrop,
     toggleAdvancedBtn, advancedFields, saveTripBtn,
     historyListEl, monthlyInsightsEl, typeInsightsEl, monthlyCostsEl
@@ -111,12 +126,42 @@ document.addEventListener("DOMContentLoaded", () => {
     return;
   }
 
+  function showAuthMsg(text) {
+    if (!authMsgEl) return;
+    authMsgEl.textContent = text || "";
+  }
+
   function showMsg(text) {
     if (!msgEl) return;
     msgEl.textContent = text;
     setTimeout(() => {
       if (msgEl.textContent === text) msgEl.textContent = "";
     }, 2500);
+  }
+
+  function showAuthView() {
+    authView.classList.remove("hidden");
+    appHeader.classList.add("hidden");
+    appMain.classList.add("hidden");
+    appFooter.classList.add("hidden");
+    tripModal.classList.add("hidden");
+
+    trips = [];
+    editingTripId = null;
+    currentUser = null;
+
+    if (sessionEmailEl) sessionEmailEl.textContent = "—";
+  }
+
+  function showAppView(user) {
+    currentUser = user;
+
+    authView.classList.add("hidden");
+    appHeader.classList.remove("hidden");
+    appMain.classList.remove("hidden");
+    appFooter.classList.remove("hidden");
+
+    if (sessionEmailEl) sessionEmailEl.textContent = user?.email || "Sesión iniciada";
   }
 
   function formatNumber(value, digits = 1) {
@@ -302,6 +347,7 @@ document.addEventListener("DOMContentLoaded", () => {
     return {
       kind: "trip",
       id: row.id,
+      userId: row.user_id,
       date: row.trip_date,
       tripType: row.trip_type,
       climate: row.climate || "No",
@@ -343,6 +389,19 @@ document.addEventListener("DOMContentLoaded", () => {
     };
   }
 
+  async function getCurrentUserId() {
+    if (currentUser?.id) return currentUser.id;
+
+    const { data, error } = await supabase.auth.getUser();
+
+    if (error || !data?.user) {
+      throw new Error("Usuario no autenticado.");
+    }
+
+    currentUser = data.user;
+    return data.user.id;
+  }
+
   async function fetchTripsFromSupabase() {
     const { data, error } = await supabase
       .from("trips")
@@ -359,7 +418,13 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   async function insertTripToSupabase(entry) {
-    const row = tripToRow(entry);
+    const userId = await getCurrentUserId();
+
+    const row = {
+      ...tripToRow(entry),
+      user_id: userId
+    };
+
     const { error } = await supabase.from("trips").insert([row]);
 
     if (error) {
@@ -370,6 +435,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   async function updateTripInSupabase(id, entry) {
     const row = tripToRow(entry);
+
     const { error } = await supabase
       .from("trips")
       .update(row)
@@ -1227,6 +1293,72 @@ document.addEventListener("DOMContentLoaded", () => {
     renderCosts();
   }
 
+  async function loadAppData() {
+    clearForm();
+
+    try {
+      trips = await fetchTripsFromSupabase();
+      populatePeriodFilters();
+      renderAll();
+      showMsg(`Cargados ${trips.length} trayectos desde Supabase.`);
+    } catch (err) {
+      console.error(err);
+      showMsg("No se pudieron cargar los datos de Supabase.");
+    }
+  }
+
+  loginBtn.addEventListener("click", async () => {
+    const email = authEmailEl.value.trim();
+    const password = authPasswordEl.value;
+
+    if (!email || !password) {
+      showAuthMsg("Introduce email y contraseña.");
+      return;
+    }
+
+    loginBtn.disabled = true;
+    loginBtn.textContent = "Entrando...";
+    showAuthMsg("");
+
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+
+      if (error) throw error;
+
+      currentUser = data.user;
+      showAppView(data.user);
+      await loadAppData();
+    } catch (err) {
+      console.error(err);
+      showAuthMsg("No se pudo iniciar sesión. Revisa email y contraseña.");
+    } finally {
+      loginBtn.disabled = false;
+      loginBtn.textContent = "Entrar";
+    }
+  });
+
+  authPasswordEl.addEventListener("keydown", event => {
+    if (event.key === "Enter") {
+      loginBtn.click();
+    }
+  });
+
+  logoutBtn.addEventListener("click", async () => {
+    const ok = confirm("¿Quieres cerrar sesión?");
+    if (!ok) return;
+
+    try {
+      await supabase.auth.signOut();
+    } catch (err) {
+      console.error(err);
+    }
+
+    showAuthView();
+  });
+
   openTripModalBtn.addEventListener("click", () => {
     clearForm();
     openModal();
@@ -1386,16 +1518,27 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   async function init() {
-    clearForm();
+    showAuthView();
 
     try {
-      trips = await fetchTripsFromSupabase();
-      populatePeriodFilters();
-      renderAll();
-      showMsg(`Cargados ${trips.length} trayectos desde Supabase.`);
+      const { data, error } = await supabase.auth.getSession();
+
+      if (error) throw error;
+
+      const session = data?.session;
+
+      if (!session?.user) {
+        showAuthView();
+        return;
+      }
+
+      currentUser = session.user;
+      showAppView(session.user);
+      await loadAppData();
     } catch (err) {
       console.error(err);
-      showMsg("No se pudieron cargar los datos de Supabase.");
+      showAuthView();
+      showAuthMsg("No se pudo comprobar la sesión.");
     }
   }
 
