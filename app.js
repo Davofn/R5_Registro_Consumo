@@ -2,12 +2,16 @@ import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 
 const SUPABASE_URL = "https://fzsioxqmpjmunaszrjdl.supabase.co";
 const SUPABASE_KEY = "sb_publishable_lPgxna3-91FskASGGI854g_RZndEz2S";
+const RENAULT_BACKEND_URL = "https://r5-renault-backend.onrender.com";
+
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 document.addEventListener("DOMContentLoaded", () => {
   let trips = [];
   let editingTripId = null;
   let currentUser = null;
+  let vehicleStatusTimer = null;
+  let lastVehicleStatus = null;
 
   const BATTERY_KWH = 52;
   const DEFAULT_HOME_PRICE = 0.117681;
@@ -31,6 +35,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const globalAvgEl = document.getElementById("globalAvg");
   const realRangeEl = document.getElementById("realRange");
   const costPer100El = document.getElementById("costPer100");
+  const vehicleStatusBarEl = document.getElementById("vehicleStatusBar");
 
   // SUMMARY
   const totalKwhEl = document.getElementById("totalKwh");
@@ -115,7 +120,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const required = [
     authView, appHeader, appMain, appFooter, authEmailEl, authPasswordEl,
-    loginBtn, logoutBtn, authMsgEl, sessionEmailEl,
+    loginBtn, logoutBtn, authMsgEl, sessionEmailEl, vehicleStatusBarEl,
     tripModal, openTripModalBtn, closeTripModalBtn, closeTripModalBackdrop,
     toggleAdvancedBtn, advancedFields, saveTripBtn,
     historyListEl, monthlyInsightsEl, typeInsightsEl, monthlyCostsEl
@@ -140,6 +145,8 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function showAuthView() {
+    stopVehicleStatusAutoRefresh();
+
     authView.classList.remove("hidden");
     appHeader.classList.add("hidden");
     appMain.classList.add("hidden");
@@ -149,8 +156,10 @@ document.addEventListener("DOMContentLoaded", () => {
     trips = [];
     editingTripId = null;
     currentUser = null;
+    lastVehicleStatus = null;
 
     if (sessionEmailEl) sessionEmailEl.textContent = "—";
+    renderVehicleStatus(null, "Actualizando datos del coche…");
   }
 
   function showAppView(user) {
@@ -456,6 +465,85 @@ document.addEventListener("DOMContentLoaded", () => {
     if (error) {
       console.error("Error borrando trip en Supabase:", error);
       throw error;
+    }
+  }
+
+  function renderVehicleStatus(data, fallbackText = "Datos del coche no disponibles") {
+    if (!vehicleStatusBarEl) return;
+
+    if (!data) {
+      vehicleStatusBarEl.textContent = fallbackText;
+      vehicleStatusBarEl.classList.add("muted");
+      return;
+    }
+
+    const batteryText = Number.isFinite(Number(data.soc))
+      ? `Batería: ${Number(data.soc)}%`
+      : "Batería: —";
+
+    const rangeText = Number.isFinite(Number(data.rangeKm))
+      ? `Autonomía actual: ${Number(data.rangeKm)} km`
+      : "Autonomía actual: —";
+
+    const statusParts = [
+      data.plugLabel,
+      data.chargingLabel
+    ].filter(Boolean);
+
+    const statusText = statusParts.length
+      ? `Estado: ${statusParts.join(" · ")}`
+      : "Estado: —";
+
+    vehicleStatusBarEl.textContent = `${batteryText} · ${rangeText} · ${statusText}`;
+    vehicleStatusBarEl.classList.remove("muted");
+  }
+
+  async function fetchVehicleStatus() {
+    if (!vehicleStatusBarEl) return;
+
+    try {
+      renderVehicleStatus(lastVehicleStatus, lastVehicleStatus ? vehicleStatusBarEl.textContent : "Actualizando datos del coche…");
+
+      const { data, error } = await supabase.auth.getSession();
+      if (error) throw error;
+
+      const token = data?.session?.access_token;
+      if (!token) throw new Error("No hay token de Supabase.");
+
+      const response = await fetch(`${RENAULT_BACKEND_URL}/renault/status`, {
+        method: "GET",
+        headers: {
+          "Authorization": `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Backend respondió ${response.status}`);
+      }
+
+      const status = await response.json();
+      lastVehicleStatus = status;
+      renderVehicleStatus(status);
+    } catch (err) {
+      console.error("Error consultando estado del coche:", err);
+      renderVehicleStatus(lastVehicleStatus, "Datos del coche no disponibles");
+    }
+  }
+
+  function startVehicleStatusAutoRefresh() {
+    stopVehicleStatusAutoRefresh();
+
+    fetchVehicleStatus();
+
+    vehicleStatusTimer = setInterval(() => {
+      fetchVehicleStatus();
+    }, 10 * 60 * 1000);
+  }
+
+  function stopVehicleStatusAutoRefresh() {
+    if (vehicleStatusTimer) {
+      clearInterval(vehicleStatusTimer);
+      vehicleStatusTimer = null;
     }
   }
 
@@ -1331,6 +1419,7 @@ document.addEventListener("DOMContentLoaded", () => {
       currentUser = data.user;
       showAppView(data.user);
       await loadAppData();
+      startVehicleStatusAutoRefresh();
     } catch (err) {
       console.error(err);
       showAuthMsg("No se pudo iniciar sesión. Revisa email y contraseña.");
@@ -1361,6 +1450,17 @@ document.addEventListener("DOMContentLoaded", () => {
 
   openTripModalBtn.addEventListener("click", () => {
     clearForm();
+
+    if (lastVehicleStatus?.odometerKm) {
+      kmStartEl.value = lastVehicleStatus.odometerKm;
+    }
+
+    if (lastVehicleStatus?.soc) {
+      socStartEl.value = lastVehicleStatus.soc;
+    }
+
+    syncGhostTripUi();
+    updateComputedCards();
     openModal();
   });
 
@@ -1535,6 +1635,7 @@ document.addEventListener("DOMContentLoaded", () => {
       currentUser = session.user;
       showAppView(session.user);
       await loadAppData();
+      startVehicleStatusAutoRefresh();
     } catch (err) {
       console.error(err);
       showAuthView();
