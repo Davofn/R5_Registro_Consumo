@@ -1522,21 +1522,34 @@ function renderVehicleStatus(data, fallbackText = "Datos del coche no disponible
     showAuthView();
   });
 
-  openTripModalBtn.addEventListener("click", () => {
-    clearForm();
+openTripModalBtn.addEventListener("click", () => {
+  clearForm();
 
-    if (lastVehicleStatus?.odometerKm) {
-      kmStartEl.value = lastVehicleStatus.odometerKm;
+  const sortedTrips = [...trips].sort(sortTrips);
+  const lastTrip = sortedTrips.length ? sortedTrips[sortedTrips.length - 1] : null;
+
+  if (lastTrip) {
+    if (Number.isFinite(Number(lastTrip.kmEnd))) {
+      kmStartEl.value = lastTrip.kmEnd;
     }
 
-    if (lastVehicleStatus?.soc) {
-      socStartEl.value = lastVehicleStatus.soc;
+    if (Number.isFinite(Number(lastTrip.socEnd))) {
+      socStartEl.value = lastTrip.socEnd;
     }
+  }
 
-    syncGhostTripUi();
-    updateComputedCards();
-    openModal();
-  });
+  if (lastVehicleStatus?.odometerKm !== null && lastVehicleStatus?.odometerKm !== undefined) {
+    kmEndEl.value = lastVehicleStatus.odometerKm;
+  }
+
+  if (lastVehicleStatus?.soc !== null && lastVehicleStatus?.soc !== undefined) {
+    socEndEl.value = lastVehicleStatus.soc;
+  }
+
+  syncGhostTripUi();
+  updateComputedCards();
+  openModal();
+});
 
   closeTripModalBtn.addEventListener("click", closeModal);
   closeTripModalBackdrop.addEventListener("click", closeModal);
