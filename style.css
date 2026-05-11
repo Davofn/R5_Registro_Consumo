@@ -332,8 +332,8 @@ img{display:block;max-width:100%}
 
 .vehicle-status-card strong{
   color:var(--text);
-  font-size:1.55rem;
-  line-height:1.08;
+  font-size:2rem;
+  line-height:1.6;
   font-weight:800;
   text-wrap:balance;
 }
@@ -621,7 +621,7 @@ select:focus{
 
 .stint-title{
   font-weight:700;
-  font-size:1rem;
+  font-size:1.2rem;
   line-height:1.2;
 }
 
