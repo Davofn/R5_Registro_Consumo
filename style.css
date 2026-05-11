@@ -303,8 +303,24 @@ img{display:block;max-width:100%}
   background:linear-gradient(180deg, rgba(255,212,0,.18), rgba(255,212,0,.08));
 }
 
+.vehicle-status-bar{
+  margin-top:14px;
+  padding:10px 14px;
+  border-radius:16px;
+  border:1px solid rgba(255,255,255,.08);
+  background:rgba(255,255,255,.025);
+  color:var(--muted);
+  font-size:13px;
+  text-align:center;
+  line-height:1.35;
+}
+
+.vehicle-status-bar.muted{
+  opacity:.75;
+}
+
 .hero-actions{
-  margin-top:22px;
+  margin-top:18px;
 }
 
 .primary,
@@ -930,7 +946,6 @@ select:focus{
   padding-left:10px;
 }
 
-/* Costes: alinear los 2 cuadros superiores */
 #tab-costs .costs-grid > .panel-card:nth-child(1),
 #tab-costs .costs-grid > .panel-card:nth-child(2){
   height:100%;
@@ -950,7 +965,6 @@ select:focus{
   flex:1;
 }
 
-/* Insights: más aire general */
 #tab-insights .panel-card{
   padding:20px 18px;
 }
@@ -963,7 +977,6 @@ select:focus{
   align-items:start;
 }
 
-/* Insights: consumo por mes más limpio */
 #monthlyInsights .monthly-detail-row{
   display:grid;
   grid-template-columns:minmax(0,1fr) auto;
@@ -1182,6 +1195,13 @@ select:focus{
 
   .metric-card strong{
     font-size:20px;
+  }
+
+  .vehicle-status-bar{
+    margin-top:10px;
+    padding:9px 10px;
+    font-size:12px;
+    border-radius:14px;
   }
 
   .hero-actions{
