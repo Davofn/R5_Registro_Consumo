@@ -12,7 +12,31 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <header class="app-header">
+  <section id="authView" class="auth-view">
+    <div class="auth-card">
+      <img class="auth-icon" src="icons/icon-192.png" alt="R5" />
+      <span class="auth-eyebrow">Renault 5</span>
+      <h1>R5 Registro de Consumo</h1>
+      <p>Inicia sesión para acceder a tus trayectos, consumos y costes.</p>
+
+      <div class="auth-form">
+        <label>
+          <span>Email</span>
+          <input id="authEmail" type="email" autocomplete="email" placeholder="tu@email.com" />
+        </label>
+
+        <label>
+          <span>Contraseña</span>
+          <input id="authPassword" type="password" autocomplete="current-password" placeholder="Contraseña" />
+        </label>
+
+        <button id="loginBtn" class="primary auth-submit">Entrar</button>
+        <p id="authMsg" class="auth-msg" aria-live="polite"></p>
+      </div>
+    </div>
+  </section>
+
+  <header id="appHeader" class="app-header hidden">
     <div class="brand">
       <div class="brand-left">
         <img class="brand-icon" src="icons/icon-192.png" alt="R5" />
@@ -21,10 +45,15 @@
           <p>Registro de consumo Renault 5</p>
         </div>
       </div>
+
+      <div class="session-box">
+        <span id="sessionEmail">—</span>
+        <button id="logoutBtn" class="ghost logout-btn">Salir</button>
+      </div>
     </div>
   </header>
 
-  <main class="container">
+  <main id="appMain" class="container hidden">
     <section class="hero-card">
       <div class="hero-top">
         <div>
@@ -392,8 +421,8 @@
     </section>
   </div>
 
-  <footer class="footer">
-    <small>v3.7.0 · Davo</small>
+  <footer id="appFooter" class="footer hidden">
+    <small>v3.8.0 · Davo</small>
   </footer>
 
   <script type="module" src="app.js"></script>
