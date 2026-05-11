@@ -1538,12 +1538,25 @@ openTripModalBtn.addEventListener("click", () => {
     }
   }
 
-  if (lastVehicleStatus?.odometerKm !== null && lastVehicleStatus?.odometerKm !== undefined) {
-    kmEndEl.value = lastVehicleStatus.odometerKm;
-  }
+  const vehicleUpdatedAt = lastVehicleStatus?.updatedAt
+    ? new Date(lastVehicleStatus.updatedAt).getTime()
+    : NaN;
 
-  if (lastVehicleStatus?.soc !== null && lastVehicleStatus?.soc !== undefined) {
-    socEndEl.value = lastVehicleStatus.soc;
+  const now = Date.now();
+  const maxAgeMs = 15 * 60 * 1000;
+  const vehicleDataIsFresh =
+    Number.isFinite(vehicleUpdatedAt) &&
+    now - vehicleUpdatedAt <= maxAgeMs &&
+    now >= vehicleUpdatedAt;
+
+  if (vehicleDataIsFresh) {
+    if (lastVehicleStatus?.odometerKm !== null && lastVehicleStatus?.odometerKm !== undefined) {
+      kmEndEl.value = lastVehicleStatus.odometerKm;
+    }
+
+    if (lastVehicleStatus?.soc !== null && lastVehicleStatus?.soc !== undefined) {
+      socEndEl.value = lastVehicleStatus.soc;
+    }
   }
 
   syncGhostTripUi();
