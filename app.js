@@ -483,32 +483,69 @@ function renderVehicleStatus(data, fallbackText = "Datos del coche no disponible
         <strong>—</strong>
       </article>
 
-      <article class="vehicle-status-card status-wide">
+      <article class="vehicle-status-card status-wide status-state-off">
         <span>Estado</span>
-        <strong>${fallbackText}</strong>
+        <div class="status-main-line">
+          <div class="status-icon-wrap">🚫</div>
+          <strong>${fallbackText}</strong>
+        </div>
       </article>
     `;
-
     vehicleStatusBarEl.classList.add("muted");
     return;
   }
 
-  const batteryText = Number.isFinite(Number(data.soc))
-    ? `${Number(data.soc)}%`
-    : "—";
+  const socNumber = Number(data.soc);
+  const rangeNumber = Number(data.rangeKm);
+  const plugStatusNumber = Number(data.plugStatus);
+  const chargingStatusNumber = Number(data.chargingStatus);
 
-  const rangeText = Number.isFinite(Number(data.rangeKm))
-    ? `${Number(data.rangeKm)} km`
-    : "—";
+  const batteryText = Number.isFinite(socNumber) ? `${socNumber}%` : "—";
+  const rangeText = Number.isFinite(rangeNumber) ? `${rangeNumber} km` : "—";
 
-  const statusParts = [
-    data.plugLabel,
-    data.chargingLabel
-  ].filter(Boolean);
+  const plugLabel = data.plugLabel || "";
+  const chargingLabel = data.chargingLabel || "";
 
-  const statusText = statusParts.length
-    ? statusParts.join(" · ")
-    : "—";
+  const isCharging =
+    (/cargando/i.test(chargingLabel) && !/no cargando/i.test(chargingLabel)) ||
+    chargingStatusNumber > 0;
+
+  const isPlugged =
+    (/enchufado/i.test(plugLabel) && !/desenchufado/i.test(plugLabel)) ||
+    plugStatusNumber > 0;
+
+  let statusClass = "status-state-off";
+  let statusIcon = "⛔";
+  let statusText = "Desenchufado · No cargando";
+
+  if (isCharging) {
+    statusClass = "status-state-charging";
+    statusIcon = "⚡";
+    statusText = [plugLabel, chargingLabel].filter(Boolean).join(" · ") || "Cargando";
+  } else if (isPlugged) {
+    statusClass = "status-state-plugged";
+    statusIcon = "🔌";
+    statusText = [plugLabel, chargingLabel].filter(Boolean).join(" · ") || "Enchufado";
+  } else {
+    statusClass = "status-state-off";
+    statusIcon = "⛔";
+    statusText = [plugLabel, chargingLabel].filter(Boolean).join(" · ") || "Desenchufado";
+  }
+
+  const progressPercent = Number.isFinite(socNumber)
+    ? Math.max(0, Math.min(100, socNumber))
+    : 0;
+
+  const chargingProgressHtml = isCharging
+    ? `
+      <div class="charging-progress-block">
+        <div class="charging-progress-track">
+          <div class="charging-progress-fill" style="width:${progressPercent}%"></div>
+        </div>
+        <small class="charging-progress-text">Carga actual: ${progressPercent}%</small>
+      </div>
+    `
+    : "";
 
   vehicleStatusBarEl.innerHTML = `
     <article class="vehicle-status-card">
@@ -521,9 +558,13 @@ function renderVehicleStatus(data, fallbackText = "Datos del coche no disponible
       <strong>${rangeText}</strong>
     </article>
 
-    <article class="vehicle-status-card status-wide">
+    <article class="vehicle-status-card status-wide ${statusClass}">
       <span>Estado</span>
-      <strong>${statusText}</strong>
+      <div class="status-main-line">
+        <div class="status-icon-wrap">${statusIcon}</div>
+        <strong>${statusText}</strong>
+      </div>
+      ${chargingProgressHtml}
     </article>
   `;
 
