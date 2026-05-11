@@ -1,4 +1,4 @@
-const CACHE_NAME = "r5-registro-consumo-v3.7.0";
+const CACHE_NAME = "r5-registro-consumo-v3.8.0";
 const ASSETS = [
   "./",
   "./index.html",
