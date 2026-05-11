@@ -33,24 +33,26 @@
         <img class="hero-car" src="assets/r5.png" alt="Renault 5" />
       </div>
 
-        <div class="hero-metrics">
-           <article class="metric-card">
-  <span>Odómetro actual</span>
-  <strong id="odoNow">—</strong>
-</article>
+      <div class="hero-metrics">
+        <article class="metric-card">
+          <span>Odómetro actual</span>
+          <strong id="odoNow">—</strong>
+        </article>
+
         <article class="metric-card featured">
           <span>Consumo medio</span>
           <strong id="globalAvg">—</strong>
         </article>
+
         <article class="metric-card">
           <span>Autonomía</span>
           <strong id="realRange">—</strong>
         </article>
+
         <article class="metric-card">
           <span>Coste / 100 km</span>
           <strong id="costPer100">—</strong>
         </article>
-       
       </div>
 
       <div class="hero-actions">
@@ -132,6 +134,32 @@
       </section>
 
       <section class="tab-panel" id="tab-insights" role="tabpanel">
+        <div class="period-toolbar">
+          <label>
+            <span>Año</span>
+            <select id="insightsYearFilter"></select>
+          </label>
+
+          <label>
+            <span>Mes</span>
+            <select id="insightsMonthFilter">
+              <option value="Todos" selected>Todos</option>
+              <option value="1">Enero</option>
+              <option value="2">Febrero</option>
+              <option value="3">Marzo</option>
+              <option value="4">Abril</option>
+              <option value="5">Mayo</option>
+              <option value="6">Junio</option>
+              <option value="7">Julio</option>
+              <option value="8">Agosto</option>
+              <option value="9">Septiembre</option>
+              <option value="10">Octubre</option>
+              <option value="11">Noviembre</option>
+              <option value="12">Diciembre</option>
+            </select>
+          </label>
+        </div>
+
         <div class="summary-grid insights-grid">
           <article class="panel-card">
             <div class="panel-head">
@@ -168,6 +196,32 @@
       </section>
 
       <section class="tab-panel" id="tab-costs" role="tabpanel">
+        <div class="period-toolbar">
+          <label>
+            <span>Año</span>
+            <select id="costsYearFilter"></select>
+          </label>
+
+          <label>
+            <span>Mes</span>
+            <select id="costsMonthFilter">
+              <option value="Todos" selected>Todos</option>
+              <option value="1">Enero</option>
+              <option value="2">Febrero</option>
+              <option value="3">Marzo</option>
+              <option value="4">Abril</option>
+              <option value="5">Mayo</option>
+              <option value="6">Junio</option>
+              <option value="7">Julio</option>
+              <option value="8">Agosto</option>
+              <option value="9">Septiembre</option>
+              <option value="10">Octubre</option>
+              <option value="11">Noviembre</option>
+              <option value="12">Diciembre</option>
+            </select>
+          </label>
+        </div>
+
         <div class="summary-grid costs-grid">
           <article class="panel-card">
             <div class="panel-head">
@@ -339,7 +393,7 @@
   </div>
 
   <footer class="footer">
-    <small>v3.6.5 · Davo</small>
+    <small>v3.7.0 · Davo</small>
   </footer>
 
   <script type="module" src="app.js"></script>
