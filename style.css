@@ -1570,3 +1570,64 @@ select:focus{
     margin-right:auto;
   }
 }
+@media (min-width: 900px){
+  .history-list{
+    gap:10px;
+  }
+
+  .stint-card{
+    padding:14px 16px;
+  }
+
+  .stint-summary{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:18px;
+  }
+
+  .stint-main{
+    display:flex;
+    align-items:center;
+    gap:22px;
+    min-width:0;
+    flex:1;
+  }
+
+  .stint-title,
+  .stint-sub,
+  .stint-meta{
+    margin:0;
+    white-space:nowrap;
+  }
+
+  .stint-title{
+    font-size:1rem;
+    font-weight:800;
+    flex:0 0 auto;
+  }
+
+  .stint-sub{
+    font-size:1rem;
+    color:var(--text);
+    opacity:1;
+    flex:0 0 auto;
+  }
+
+  .stint-meta{
+    font-size:.9rem;
+    color:var(--muted);
+    flex:1 1 auto;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+
+  .toggle-details{
+    flex:0 0 auto;
+    padding:11px 16px;
+  }
+
+  .current-stint-badge{
+    margin-right:10px;
+  }
+}
