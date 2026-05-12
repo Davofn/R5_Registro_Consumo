@@ -1637,3 +1637,10 @@ select:focus{
     align-items:start;
   }
 }
+@media (min-width: 900px){
+  .period-toolbar{
+    max-width:520px;
+    margin-left:auto;
+    margin-right:auto;
+  }
+}
