@@ -1263,21 +1263,38 @@ function renderVehicleStatus(data, fallbackText = "Datos del coche no disponible
     const bestAvg = validTypeStats.length ? Math.min(...validTypeStats.map(t => t.avg)) : NaN;
 
     function renderTypeLine(stat) {
-      if (!Number.isFinite(stat.avg) || stat.avg <= 0) {
-        return `<div class="stat-row"><span>${stat.name}</span><strong>—</strong></div>`;
-      }
-
-      const usageText = Number.isFinite(stat.usagePct) ? `${formatNumber(stat.usagePct, 0)}% uso` : "—";
-      const penaltyText = formatDeltaPercent(bestAvg, stat.avg);
-      const rangeText = formatRangeFromAvg(stat.avg);
-
-      return `
-        <div class="stat-row">
-          <span>${stat.name}</span>
-          <strong>${usageText} · ${penaltyText} · ${rangeText}</strong>
+  if (!stat || !Number.isFinite(stat.avg) || stat.avg <= 0) {
+    return `
+      <div class="type-insight-card">
+        <div class="type-insight-name">—</div>
+        <div class="type-insight-metrics">
+          <span>—</span>
+          <span>—</span>
+          <span>—</span>
         </div>
-      `;
-    }
+      </div>
+    `;
+  }
+
+  const usageText = Number.isFinite(stat.usagePct) ? `${formatNumber(stat.usagePct, 0)}% uso` : "—";
+  const penaltyText = formatDeltaPercent(bestAvg, stat.avg);
+  const rangeText = formatRangeFromAvg(stat.avg);
+
+  let typeClass = "type-insight-highway";
+  if (stat.name === "Ciudad") typeClass = "type-insight-city";
+  if (stat.name === "Mixto") typeClass = "type-insight-mixed";
+
+  return `
+    <div class="type-insight-card ${typeClass}">
+      <div class="type-insight-name">${stat.name}</div>
+      <div class="type-insight-metrics">
+        <span>${usageText}</span>
+        <span>${penaltyText}</span>
+        <span>${rangeText}</span>
+      </div>
+    </div>
+  `;
+}
 
     typeInsightsEl.innerHTML = `
       ${renderTypeLine(typeStats.find(t => t.name === "Ciudad"))}
