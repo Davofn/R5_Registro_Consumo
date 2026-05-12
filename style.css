@@ -1647,3 +1647,13 @@ select:focus{
     margin-right:auto;
   }
 }
+.tabs{
+  margin-left:auto;
+  margin-right:auto;
+}
+@media (min-width: 641px){
+  .tabs{
+    margin-left:auto;
+    margin-right:auto;
+  }
+}
