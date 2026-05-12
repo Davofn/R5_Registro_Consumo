@@ -1631,3 +1631,9 @@ select:focus{
     margin-right:10px;
   }
 }
+@media (min-width: 900px){
+  .insights-grid{
+    grid-template-columns:1.25fr 1fr 1fr;
+    align-items:start;
+  }
+}
