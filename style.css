@@ -1657,3 +1657,83 @@ select:focus{
     margin-right:auto;
   }
 }
+#typeInsights{
+  gap:10px;
+}
+
+#typeInsights .stat-row{
+  display:none;
+}
+
+.type-insight-card{
+  display:grid;
+  grid-template-columns:96px 1fr;
+  align-items:center;
+  gap:12px;
+  padding:12px 14px;
+  border-radius:16px;
+  border:1px solid rgba(255,255,255,.08);
+  background:rgba(255,255,255,.025);
+}
+
+.type-insight-name{
+  font-weight:800;
+  color:var(--text);
+}
+
+.type-insight-metrics{
+  display:grid;
+  grid-template-columns:repeat(3, minmax(0, 1fr));
+  gap:8px;
+  text-align:center;
+}
+
+.type-insight-metrics span{
+  padding:7px 8px;
+  border-radius:999px;
+  background:rgba(255,255,255,.04);
+  color:var(--text);
+  font-size:13px;
+  font-weight:800;
+  white-space:nowrap;
+}
+
+.type-insight-city{
+  border-color:rgba(34,197,94,.18);
+}
+
+.type-insight-mixed{
+  border-color:rgba(255,212,0,.18);
+}
+
+.type-insight-highway{
+  border-color:rgba(59,130,246,.18);
+}
+
+.type-insight-city .type-insight-name{
+  color:#8ef0b4;
+}
+
+.type-insight-mixed .type-insight-name{
+  color:#ffe773;
+}
+
+.type-insight-highway .type-insight-name{
+  color:#91bdff;
+}
+
+@media (max-width: 640px){
+  .type-insight-card{
+    grid-template-columns:1fr;
+    gap:8px;
+  }
+
+  .type-insight-metrics{
+    grid-template-columns:repeat(3, 1fr);
+  }
+
+  .type-insight-metrics span{
+    font-size:12px;
+    padding:7px 6px;
+  }
+}
