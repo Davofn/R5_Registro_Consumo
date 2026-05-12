@@ -1197,12 +1197,13 @@ function renderVehicleStatus(data, fallbackText = "Datos del coche no disponible
       return `
         <div class="stat-row monthly-detail-row">
           <span>${formatMonthLabel(month.monthKey)}</span>
-          <strong>
-            <span class="metric-value">${Number.isFinite(month.avg) ? formatNumber(month.avg, 1) : "—"}</span>
-            <span class="metric-unit"> kWh/100 km</span><br>
-            <span class="metric-value">${formatNumber(month.km, 1)}</span>
-            <span class="metric-unit"> km</span>
-          </strong>
+        <strong>
+  <span class="metric-value">${Number.isFinite(month.avg) ? formatNumber(month.avg, 1) : "—"}</span>
+  <span class="metric-unit"> kWh/100 km</span>
+  <span class="metric-separator"> · </span>
+  <span class="metric-value">${formatNumber(month.km, 1)}</span>
+  <span class="metric-unit"> km</span>
+</strong>
         </div>
       `;
     }
