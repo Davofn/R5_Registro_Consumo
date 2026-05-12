@@ -1026,11 +1026,14 @@ select:focus{
 #monthlyInsights .monthly-detail-row strong{
   text-align:right;
   line-height:1.35;
-  white-space:normal;
-  max-width:190px;
+  white-space:nowrap;
+  max-width:none;
   font-weight:400;
 }
-
+#monthlyInsights .monthly-detail-row .metric-separator{
+  color:var(--muted);
+  font-weight:400;
+}
 #monthlyInsights .monthly-detail-row .metric-value{
   font-weight:700;
   color:var(--text);
