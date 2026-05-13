@@ -27,6 +27,7 @@
   --radius-sm:14px;
   --container:1200px;
   font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+  font-size:15px;
 }
 
 *{box-sizing:border-box}
@@ -1006,7 +1007,7 @@ input::placeholder{
 }
 
 .cost-box{
-  padding:12px 14px;
+  padding:16px 18px;
   border-right:1px solid rgba(255,255,255,.06);
 }
 
@@ -1015,8 +1016,8 @@ input::placeholder{
 }
 
 .cost-box h4{
-  margin:0 0 8px;
-  font-size:11px;
+  margin:0 0 10px;
+  font-size:12px;
   font-weight:600;
   color:var(--muted);
   text-transform:uppercase;
@@ -1024,7 +1025,7 @@ input::placeholder{
 }
 
 .cost-box .stat-row{
-  padding:6px 0;
+  padding:9px 0;
   border-bottom:1px solid rgba(255,255,255,.04);
 }
 
@@ -1033,17 +1034,18 @@ input::placeholder{
 }
 
 .cost-box .stat-row span{
-  font-size:11px;
+  font-size:13px;
 }
 
 .cost-box .stat-row strong{
-  font-size:12px;
+  font-size:13px;
+  font-weight:600;
   text-align:right;
   white-space:nowrap;
 }
 
 .monthly-cost-row{
-  padding-left:0;
+  padding-left:18px;
   border-left:none;
 }
 
@@ -1399,35 +1401,36 @@ input::placeholder{
 }
 
 .type-insight-card{
-  display:grid;
-  grid-template-columns:110px 1fr;
+  display:flex;
   align-items:center;
-  gap:14px;
-  padding:16px 18px;
+  gap:16px;
+  padding:18px;
   border-radius:12px;
   border:1px solid rgba(255,255,255,.07);
   background:#1f2535;
 }
 
 .type-insight-name{
-  font-size:16px;
+  font-size:17px;
   font-weight:800;
   color:var(--text);
+  min-width:90px;
+  flex-shrink:0;
 }
 
 .type-insight-metrics{
-  display:grid;
-  grid-template-columns:repeat(3, minmax(0, 1fr));
-  gap:6px;
-  text-align:center;
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  flex:1;
 }
 
 .type-insight-metrics span{
-  padding:8px 6px;
+  padding:8px 14px;
   border-radius:8px;
   background:#141820;
   color:var(--text);
-  font-size:13px;
+  font-size:14px;
   font-weight:600;
   white-space:nowrap;
 }
