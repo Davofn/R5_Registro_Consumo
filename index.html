@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <meta name="theme-color" content="#ffd400" />
+  <meta name="theme-color" content="#E5B800" />
   <title>R5 Registro de Consumo</title>
 
   <link rel="manifest" href="manifest.json" />
@@ -12,6 +12,10 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+
+  <!-- ══════════════════════════════════════
+       AUTH
+  ═══════════════════════════════════════════ -->
   <section id="authView" class="auth-view">
     <div class="auth-card">
       <img class="auth-icon" src="icons/icon-192.png" alt="R5" />
@@ -36,6 +40,9 @@
     </div>
   </section>
 
+  <!-- ══════════════════════════════════════
+       HEADER
+  ═══════════════════════════════════════════ -->
   <header id="appHeader" class="app-header hidden">
     <div class="brand">
       <div class="brand-left">
@@ -53,15 +60,48 @@
     </div>
   </header>
 
+  <!-- ══════════════════════════════════════
+       MAIN
+  ═══════════════════════════════════════════ -->
   <main id="appMain" class="container hidden">
+
     <section class="hero-card">
+
+      <!-- Fila superior: título + coche -->
       <div class="hero-top">
         <div>
           <span class="eyebrow">Registro consumo Renault 5</span>
         </div>
-        <img class="hero-car" src="assets/r5.png" alt="Renault 5" />
+
+        <!-- SVG del R5 inline (fallback al PNG si existe) -->
+        <div class="hero-car-wrap">
+          <img
+            class="hero-car"
+            src="assets/r5.png"
+            alt="Renault 5"
+            onerror="this.style.display='none';this.nextElementSibling.style.display='block'"
+          />
+          <!-- SVG de reserva si no existe el PNG -->
+          <svg class="hero-car-svg" style="display:none" viewBox="0 0 320 110" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <ellipse cx="160" cy="104" rx="120" ry="7" fill="rgba(255,255,255,.04)"/>
+            <path d="M30 78 Q30 90 44 90 L276 90 Q290 90 290 78 L290 60 Q290 55 285 52 L258 44 Q244 28 218 22 L132 22 Q112 22 100 32 L58 44 Q22 50 22 60 Z" fill="#E5B800"/>
+            <path d="M104 33 Q110 26 125 25 L155 25 L155 43 L99 43 Z" fill="rgba(14,17,23,.3)"/>
+            <path d="M158 25 L192 25 Q206 25 218 33 L218 43 L158 43 Z" fill="rgba(14,17,23,.3)"/>
+            <rect x="155" y="25" width="3" height="18" fill="rgba(0,0,0,.2)"/>
+            <path d="M285 54 L296 57 L296 67 L285 70 Z" fill="rgba(255,255,255,.5)"/>
+            <path d="M30 56 L20 58 L20 68 L30 70 Z" fill="rgba(200,30,30,.6)"/>
+            <circle cx="78" cy="90" r="17" fill="#0e1117"/>
+            <circle cx="78" cy="90" r="11" fill="#1a1f2e"/>
+            <circle cx="78" cy="90" r="5" fill="#252d40"/>
+            <circle cx="240" cy="90" r="17" fill="#0e1117"/>
+            <circle cx="240" cy="90" r="11" fill="#1a1f2e"/>
+            <circle cx="240" cy="90" r="5" fill="#252d40"/>
+            <path d="M174 39 L179 33 L184 39 L179 45 Z" fill="rgba(0,0,0,.22)"/>
+          </svg>
+        </div>
       </div>
 
+      <!-- Métricas principales -->
       <div class="hero-metrics">
         <article class="metric-card">
           <span>Odómetro actual</span>
@@ -84,6 +124,7 @@
         </article>
       </div>
 
+      <!-- Estado del vehículo (batería, autonomía, carga) -->
       <div id="vehicleStatusBar" class="vehicle-status-cards">
         <article class="vehicle-status-card">
           <span>Batería actual</span>
@@ -101,11 +142,16 @@
         </article>
       </div>
 
+      <!-- CTA -->
       <div class="hero-actions">
         <button id="openTripModal" class="primary cta">+ Añadir trayecto</button>
       </div>
+
     </section>
 
+    <!-- ══════════════════════════════════════
+         TABS
+    ═══════════════════════════════════════════ -->
     <section class="tabs-card">
       <div class="tabs" role="tablist" aria-label="Secciones">
         <button class="tab active" data-tab="summary" role="tab" aria-selected="true">Resumen</button>
@@ -114,8 +160,10 @@
         <button class="tab" data-tab="costs" role="tab" aria-selected="false">Costes</button>
       </div>
 
+      <!-- ── TAB: RESUMEN ── -->
       <section class="tab-panel active" id="tab-summary" role="tabpanel">
         <div class="summary-grid">
+
           <article class="panel-card">
             <div class="panel-head">
               <h3>Uso general</h3>
@@ -143,9 +191,11 @@
             </div>
             <div id="lastStintSummary" class="last-stint-empty">Aún no hay datos suficientes.</div>
           </article>
+
         </div>
       </section>
 
+      <!-- ── TAB: HISTÓRICO ── -->
       <section class="tab-panel" id="tab-history" role="tabpanel">
         <div class="history-toolbar">
           <button id="toggleFilters" class="ghost">Filtrar</button>
@@ -179,6 +229,7 @@
         <div id="historyList" class="history-list"></div>
       </section>
 
+      <!-- ── TAB: INSIGHTS ── -->
       <section class="tab-panel" id="tab-insights" role="tabpanel">
         <div class="period-toolbar">
           <label>
@@ -207,6 +258,7 @@
         </div>
 
         <div class="summary-grid insights-grid">
+
           <article class="panel-card">
             <div class="panel-head">
               <h3>Consumo por mes</h3>
@@ -238,9 +290,11 @@
               <div class="stat-row"><span>Media fuera</span><strong id="awayAvgDays">—</strong></div>
             </div>
           </article>
+
         </div>
       </section>
 
+      <!-- ── TAB: COSTES ── -->
       <section class="tab-panel" id="tab-costs" role="tabpanel">
         <div class="period-toolbar">
           <label>
@@ -269,6 +323,7 @@
         </div>
 
         <div class="summary-grid costs-grid">
+
           <article class="panel-card">
             <div class="panel-head">
               <h3>Resumen general</h3>
@@ -319,15 +374,22 @@
               <div class="stat-row"><span>—</span><strong>—</strong></div>
             </div>
           </article>
+
         </div>
       </section>
+
     </section>
 
     <p class="hint" id="msg" aria-live="polite"></p>
+
   </main>
 
+  <!-- ══════════════════════════════════════
+       MODAL AÑADIR TRAYECTO
+  ═══════════════════════════════════════════ -->
   <div id="tripModal" class="modal hidden" aria-hidden="true">
     <div class="modal-backdrop" id="closeTripModalBackdrop"></div>
+
     <section class="modal-sheet" role="dialog" aria-modal="true" aria-labelledby="tripModalTitle">
       <div class="modal-header">
         <div>
@@ -438,6 +500,9 @@
     </section>
   </div>
 
+  <!-- ══════════════════════════════════════
+       FOOTER
+  ═══════════════════════════════════════════ -->
   <footer id="appFooter" class="footer hidden">
     <small>v3.9.2 · Davo</small>
   </footer>
