@@ -67,38 +67,59 @@
 
     <section class="hero-card">
 
-      <!-- Fila superior: título + coche -->
+      <!-- Banda superior: batería + autonomía + coche -->
       <div class="hero-top">
         <div>
-          <span class="eyebrow">Registro consumo Renault 5</span>
+          <span class="eyebrow">Renault 5 E-Tech · Consumo</span>
+          <div class="hero-soc">
+            <span class="hero-soc-number" id="heroBatteryPct">—</span>
+            <span class="hero-soc-pct">%</span>
+          </div>
         </div>
+        <div style="display:flex;align-items:center;gap:14px;">
+          <div class="hero-range-pill">
+            <span class="hero-range-val" id="heroRangeVal">— km</span>
+            <span class="hero-range-lbl">autonomía</span>
+          </div>
+          <div class="hero-car-wrap">
+            <img
+              class="hero-car"
+              src="assets/r5.png"
+              alt="Renault 5"
+              onerror="this.style.display='none';this.nextElementSibling.style.display='block'"
+            />
+            <svg class="hero-car-svg" style="display:none" viewBox="0 0 280 100" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <ellipse cx="140" cy="96" rx="105" ry="6" fill="rgba(255,255,255,.04)"/>
+              <path d="M26 70 Q26 82 38 82 L242 82 Q254 82 254 70 L254 55 Q254 50 250 47 L228 40 Q215 26 193 21 L120 21 Q103 21 93 30 L54 40 Q28 46 26 55 Z" fill="#E5B800"/>
+              <path d="M97 31 Q103 25 117 24 L145 24 L145 38 L92 38 Z" fill="rgba(14,17,23,.28)"/>
+              <path d="M148 24 L178 24 Q190 24 200 31 L200 38 L148 38 Z" fill="rgba(14,17,23,.28)"/>
+              <rect x="145" y="24" width="3" height="14" fill="rgba(0,0,0,.2)"/>
+              <path d="M250 49 L260 52 L260 61 L250 64 Z" fill="rgba(255,255,255,.45)"/>
+              <path d="M26 51 L17 54 L17 62 L26 64 Z" fill="rgba(200,30,30,.55)"/>
+              <circle cx="70" cy="82" r="15" fill="#0e1117"/>
+              <circle cx="70" cy="82" r="9" fill="#1a1f2e"/>
+              <circle cx="70" cy="82" r="4" fill="#252d40"/>
+              <circle cx="210" cy="82" r="15" fill="#0e1117"/>
+              <circle cx="210" cy="82" r="9" fill="#1a1f2e"/>
+              <circle cx="210" cy="82" r="4" fill="#252d40"/>
+              <path d="M153 34 L158 28 L163 34 L158 40 Z" fill="rgba(0,0,0,.2)"/>
+            </svg>
+          </div>
+        </div>
+      </div>
 
-        <!-- SVG del R5 inline (fallback al PNG si existe) -->
-        <div class="hero-car-wrap">
-          <img
-            class="hero-car"
-            src="assets/r5.png"
-            alt="Renault 5"
-            onerror="this.style.display='none';this.nextElementSibling.style.display='block'"
-          />
-          <!-- SVG de reserva si no existe el PNG -->
-          <svg class="hero-car-svg" style="display:none" viewBox="0 0 320 110" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-            <ellipse cx="160" cy="104" rx="120" ry="7" fill="rgba(255,255,255,.04)"/>
-            <path d="M30 78 Q30 90 44 90 L276 90 Q290 90 290 78 L290 60 Q290 55 285 52 L258 44 Q244 28 218 22 L132 22 Q112 22 100 32 L58 44 Q22 50 22 60 Z" fill="#E5B800"/>
-            <path d="M104 33 Q110 26 125 25 L155 25 L155 43 L99 43 Z" fill="rgba(14,17,23,.3)"/>
-            <path d="M158 25 L192 25 Q206 25 218 33 L218 43 L158 43 Z" fill="rgba(14,17,23,.3)"/>
-            <rect x="155" y="25" width="3" height="18" fill="rgba(0,0,0,.2)"/>
-            <path d="M285 54 L296 57 L296 67 L285 70 Z" fill="rgba(255,255,255,.5)"/>
-            <path d="M30 56 L20 58 L20 68 L30 70 Z" fill="rgba(200,30,30,.6)"/>
-            <circle cx="78" cy="90" r="17" fill="#0e1117"/>
-            <circle cx="78" cy="90" r="11" fill="#1a1f2e"/>
-            <circle cx="78" cy="90" r="5" fill="#252d40"/>
-            <circle cx="240" cy="90" r="17" fill="#0e1117"/>
-            <circle cx="240" cy="90" r="11" fill="#1a1f2e"/>
-            <circle cx="240" cy="90" r="5" fill="#252d40"/>
-            <path d="M174 39 L179 33 L184 39 L179 45 Z" fill="rgba(0,0,0,.22)"/>
-          </svg>
+      <!-- Barra de batería -->
+      <div class="hero-bar-wrap">
+        <div class="hero-bar-track">
+          <div class="hero-bar-fill" id="heroBatteryBar" style="width:0%"></div>
         </div>
+      </div>
+
+      <!-- Pills de estado del coche -->
+      <div class="hero-pills" id="heroPills">
+        <div class="hero-pill"><span class="hero-pill-dot" id="heroPlugDot"></span><span id="heroPlugText">Cargando…</span></div>
+        <div class="hero-pill"><span class="hero-pill-dot" id="heroChargeDot"></span><span id="heroChargeText">Cargando…</span></div>
+        <div class="hero-pill" id="heroUpdatePill" style="display:none">🕐 <span id="heroUpdateText"></span></div>
       </div>
 
       <!-- Métricas principales -->
@@ -124,7 +145,7 @@
         </article>
       </div>
 
-      <!-- Estado del vehículo (batería, autonomía, carga) -->
+      <!-- Estado del vehículo -->
       <div id="vehicleStatusBar" class="vehicle-status-cards">
         <article class="vehicle-status-card">
           <span>Batería actual</span>
@@ -508,5 +529,80 @@
   </footer>
 
   <script type="module" src="app.js"></script>
+
+  <!-- Sincroniza los nuevos elementos del hero con los datos del vehículo -->
+  <script>
+  (function() {
+    // Observa cambios en vehicleStatusBar para mantener hero sincronizado
+    const bar = document.getElementById('vehicleStatusBar');
+    if (!bar) return;
+
+    function syncHero() {
+      // Leer batería del primer vehicle-status-card
+      const cards = bar.querySelectorAll('.vehicle-status-card');
+      if (!cards.length) return;
+
+      const batteryStr = cards[0]?.querySelector('strong')?.textContent || '';
+      const rangeStr   = cards[1]?.querySelector('strong')?.textContent || '';
+
+      // Número grande de batería
+      const numEl = document.getElementById('heroBatteryPct');
+      if (numEl) numEl.textContent = batteryStr.replace('%','').trim() || '—';
+
+      // Barra de batería
+      const barFill = document.getElementById('heroBatteryBar');
+      if (barFill) {
+        const pct = parseInt(batteryStr) || 0;
+        barFill.style.width = pct + '%';
+        // Color según nivel
+        barFill.style.background = pct <= 15 ? '#f87171' : pct <= 30 ? '#f59e0b' : '#E5B800';
+      }
+
+      // Pill de autonomía en hero-range-val
+      const rangeEl = document.getElementById('heroRangeVal');
+      if (rangeEl) rangeEl.textContent = rangeStr || '— km';
+
+      // Pills de enchufado / cargando
+      const wide = bar.querySelector('.status-wide strong');
+      const statusTxt = wide?.textContent || '';
+      const isCharging = bar.querySelector('.status-state-charging') !== null;
+      const isPlugged  = bar.querySelector('.status-state-plugged')  !== null;
+
+      const plugDot  = document.getElementById('heroPlugDot');
+      const plugTxt  = document.getElementById('heroPlugText');
+      const chgDot   = document.getElementById('heroChargeDot');
+      const chgTxt   = document.getElementById('heroChargeText');
+
+      if (plugDot && plugTxt) {
+        plugDot.className = 'hero-pill-dot' + (isPlugged || isCharging ? ' on' : '');
+        plugTxt.textContent = isPlugged || isCharging ? 'Enchufado' : 'Desenchufado';
+      }
+      if (chgDot && chgTxt) {
+        chgDot.className = 'hero-pill-dot' + (isCharging ? ' on' : '');
+        chgTxt.textContent = isCharging ? 'Cargando' : 'No cargando';
+      }
+
+      // Pill de hora de actualización
+      const updatePill = document.getElementById('heroUpdatePill');
+      const updateTxt  = document.getElementById('heroUpdateText');
+      const updEl = bar.querySelector('.charging-progress-text');
+      if (updatePill && updateTxt) {
+        if (updEl) {
+          updateTxt.textContent = updEl.textContent;
+          updatePill.style.display = 'flex';
+        } else {
+          updatePill.style.display = 'none';
+        }
+      }
+    }
+
+    // Observar mutaciones en vehicleStatusBar
+    const observer = new MutationObserver(syncHero);
+    observer.observe(bar, { childList: true, subtree: true, characterData: true });
+
+    // También sincronizar al arrancar
+    syncHero();
+  })();
+  </script>
 </body>
 </html>
