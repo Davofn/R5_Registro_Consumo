@@ -541,7 +541,7 @@ const chargeTimeStart = data.chargeTimeStart || "";
     statusText = [plugLabel, chargingLabel].filter(Boolean).join(" · ") || "Enchufado";
   }
 }
-  } else {
+ else {
     statusClass = "status-state-off";
     statusIcon = "⛔";
     statusText = [plugLabel, chargingLabel].filter(Boolean).join(" · ") || "Desenchufado · No cargando";
