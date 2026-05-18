@@ -508,13 +508,28 @@ function renderVehicleStatus(data, fallbackText = "Datos del coche no disponible
   const chargingLabel = data.chargingLabel || "";
 const chargeMode = data.chargeMode || "";
 const chargeTimeStart = data.chargeTimeStart || "";
-  const isCharging =
-    (chargingStatusNumber > 0) ||
-    (/cargando/i.test(chargingLabel) && !/no cargando/i.test(chargingLabel));
 
-  const isPlugged =
-    (plugStatusNumber > 0) ||
-    (/enchufado/i.test(plugLabel) && !/desenchufado/i.test(plugLabel));
+
+const isScheduled =
+  /scheduled/i.test(chargeMode) ||
+  chargingStatusNumber === 0.3 ||
+  /programada/i.test(chargingLabel);
+
+const isCharging =
+  chargingStatusNumber === 1 ||
+  chargingStatusNumber === 1.0 ||
+  (
+    /cargando/i.test(chargingLabel) &&
+    !/no cargando/i.test(chargingLabel) &&
+    !/programada/i.test(chargingLabel)
+  );
+
+const isPlugged =
+  plugStatusNumber === 1 ||
+  (
+    /enchufado/i.test(plugLabel) &&
+    !/desenchufado/i.test(plugLabel)
+  );
 
   let statusClass = "status-state-off";
   let statusIcon = "⛔";
