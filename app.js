@@ -491,10 +491,49 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  function renderHeroChargeDetail({ isPlugged, isCharging, isScheduled, chargeTimeStart, chargingRemainingTime }) {
+  function estimateChargingPowerKw({ soc, chargingRemainingTime }) {
+    const socNumber = Number(soc);
+    const remainingMinutes = Number(chargingRemainingTime);
+
+    // Kelec parece estimar la potencia hasta el 80%, no hasta el 100%.
+    const TARGET_SOC = 80;
+
+    if (
+      !Number.isFinite(socNumber) ||
+      !Number.isFinite(remainingMinutes) ||
+      socNumber < 0 ||
+      socNumber >= TARGET_SOC ||
+      remainingMinutes <= 0
+    ) {
+      return NaN;
+    }
+
+    const remainingKwh = BATTERY_KWH * ((TARGET_SOC - socNumber) / 100);
+    const remainingHours = remainingMinutes / 60;
+
+    return remainingKwh / remainingHours;
+  }
+
+  function renderHeroChargeDetail({
+    isPlugged,
+    isCharging,
+    isScheduled,
+    chargeTimeStart,
+    chargingRemainingTime,
+    chargingPowerKw,
+    soc
+  }) {
     if (!heroChargeDetailEl) return;
 
     const remainingText = formatMinutesToHours(chargingRemainingTime);
+    const realPowerKw = Number(chargingPowerKw);
+    const estimatedPowerKw = estimateChargingPowerKw({ soc, chargingRemainingTime });
+
+    const powerText = Number.isFinite(realPowerKw) && realPowerKw > 0
+      ? `${formatNumber(realPowerKw, 1)} kW`
+      : Number.isFinite(estimatedPowerKw) && estimatedPowerKw > 0
+        ? `~${formatNumber(estimatedPowerKw, 1)} kW`
+        : "";
 
     const parts = [];
 
@@ -508,6 +547,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (remainingText) {
       parts.push(`restante ${remainingText}`);
+    }
+
+    if (powerText) {
+      parts.push(powerText);
     }
 
     if (!parts.length) {
@@ -566,6 +609,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const chargeMode = data.chargeMode || "";
     const chargeTimeStart = data.chargeTimeStart || "";
     const chargingRemainingTime = Number(data.chargingRemainingTime);
+    const chargingPowerKw = Number(data.chargingPowerKw);
 
     const isScheduled =
       /scheduled/i.test(chargeMode) ||
@@ -593,7 +637,9 @@ document.addEventListener("DOMContentLoaded", () => {
       isCharging,
       isScheduled,
       chargeTimeStart,
-      chargingRemainingTime
+      chargingRemainingTime,
+      chargingPowerKw,
+      soc: socNumber
     });
 
     let statusClass = "status-state-off";
