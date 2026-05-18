@@ -556,22 +556,40 @@
       }
 
       // Pills estado
-      const isCharging = bar.querySelector('.status-state-charging') !== null;
-      const isPlugged  = bar.querySelector('.status-state-plugged')  !== null;
+const statusCard = cards[2];
+const statusText = statusCard?.textContent || "";
 
-      const plugDot = document.getElementById('heroPlugDot');
-      const plugTxt = document.getElementById('heroPlugText');
-      const chgDot  = document.getElementById('heroChargeDot');
-      const chgTxt  = document.getElementById('heroChargeText');
+const isCharging = bar.querySelector('.status-state-charging') !== null;
+const isPlugged  =
+  bar.querySelector('.status-state-plugged') !== null ||
+  bar.querySelector('.status-state-charging') !== null;
 
-      if (plugDot && plugTxt) {
-        plugDot.className = 'hero-pill-dot' + (isPlugged || isCharging ? ' on' : '');
-        plugTxt.textContent = isPlugged || isCharging ? 'Enchufado' : 'Desenchufado';
-      }
-      if (chgDot && chgTxt) {
-        chgDot.className = 'hero-pill-dot' + (isCharging ? ' on' : '');
-        chgTxt.textContent = isCharging ? 'Cargando' : 'No cargando';
-      }
+const isScheduled =
+  /programada/i.test(statusText) ||
+  /esperando/i.test(statusText);
+
+const plugDot = document.getElementById('heroPlugDot');
+const plugTxt = document.getElementById('heroPlugText');
+const chgDot  = document.getElementById('heroChargeDot');
+const chgTxt  = document.getElementById('heroChargeText');
+
+if (plugDot && plugTxt) {
+  plugDot.className = 'hero-pill-dot' + (isPlugged ? ' on' : '');
+  plugTxt.textContent = isPlugged ? 'Enchufado' : 'Desenchufado';
+}
+
+if (chgDot && chgTxt) {
+  chgDot.className = 'hero-pill-dot' + ((isCharging || isScheduled) ? ' on' : '');
+
+  if (isCharging) {
+    chgTxt.textContent = 'Cargando';
+  } else if (isScheduled) {
+    chgTxt.textContent = 'Carga programada';
+  } else {
+    chgTxt.textContent = 'No cargando';
+  }
+}
+
     }
 
     const observer = new MutationObserver(syncHero);
