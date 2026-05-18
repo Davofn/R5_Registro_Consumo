@@ -611,7 +611,7 @@ function renderVehicleStatus(data, fallbackText = "Datos del coche no disponible
 
     vehicleStatusTimer = setInterval(() => {
       fetchVehicleStatus();
-    }, 10 * 60 * 1000);
+    }, 5 * 60 * 1000);
   }
 
   function stopVehicleStatusAutoRefresh() {
