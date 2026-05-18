@@ -524,7 +524,7 @@ const chargeTimeStart = data.chargeTimeStart || "";
     statusClass = "status-state-charging";
     statusIcon = "⚡";
     statusText = [plugLabel, chargingLabel].filter(Boolean).join(" · ") || "Cargando";
-  } } else if (isPlugged) {
+  }  else if (isPlugged) {
   statusClass = "status-state-plugged";
   statusIcon = "🔌";
 
