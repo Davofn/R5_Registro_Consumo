@@ -36,6 +36,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const realRangeEl = document.getElementById("realRange");
   const costPer100El = document.getElementById("costPer100");
   const vehicleStatusBarEl = document.getElementById("vehicleStatusBar");
+  const heroChargeDetailEl = document.getElementById("heroChargeDetail");
 
   // SUMMARY
   const totalKwhEl = document.getElementById("totalKwh");
@@ -207,6 +208,28 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function formatDays(value) {
     return Number.isFinite(value) ? `${formatNumber(value, 1)} días` : "—";
+  }
+
+  function formatMinutesToHours(minutes) {
+    const totalMinutes = Number(minutes);
+
+    if (!Number.isFinite(totalMinutes) || totalMinutes <= 0) {
+      return "";
+    }
+
+    const rounded = Math.round(totalMinutes);
+    const hours = Math.floor(rounded / 60);
+    const mins = rounded % 60;
+
+    if (hours > 0 && mins > 0) {
+      return `${hours} h ${mins} min`;
+    }
+
+    if (hours > 0) {
+      return `${hours} h`;
+    }
+
+    return `${mins} min`;
   }
 
   function safeAvg(totalKwh, totalKm) {
@@ -468,11 +491,45 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-function renderVehicleStatus(data, fallbackText = "Datos del coche no disponibles") {
-  if (!vehicleStatusBarEl) return;
+  function renderHeroChargeDetail({ isPlugged, isCharging, isScheduled, chargeTimeStart, chargingRemainingTime }) {
+    if (!heroChargeDetailEl) return;
 
-  if (!data) {
-    vehicleStatusBarEl.innerHTML = `
+    const remainingText = formatMinutesToHours(chargingRemainingTime);
+
+    const parts = [];
+
+    if (isScheduled && chargeTimeStart) {
+      parts.push(`Inicio ${chargeTimeStart}`);
+    } else if (isCharging) {
+      parts.push("Cargando ahora");
+    } else if (isPlugged) {
+      parts.push("Enchufado");
+    }
+
+    if (remainingText) {
+      parts.push(`restante ${remainingText}`);
+    }
+
+    if (!parts.length) {
+      heroChargeDetailEl.classList.add("hidden");
+      heroChargeDetailEl.textContent = "";
+      return;
+    }
+
+    heroChargeDetailEl.textContent = parts.join(" · ");
+    heroChargeDetailEl.classList.remove("hidden");
+  }
+
+  function renderVehicleStatus(data, fallbackText = "Datos del coche no disponibles") {
+    if (!vehicleStatusBarEl) return;
+
+    if (!data) {
+      if (heroChargeDetailEl) {
+        heroChargeDetailEl.classList.add("hidden");
+        heroChargeDetailEl.textContent = "";
+      }
+
+      vehicleStatusBarEl.innerHTML = `
       <article class="vehicle-status-card">
         <span>Batería actual</span>
         <strong>—</strong>
@@ -492,82 +549,84 @@ function renderVehicleStatus(data, fallbackText = "Datos del coche no disponible
       </article>
     `;
 
-    vehicleStatusBarEl.classList.add("muted");
-    return;
-  }
+      vehicleStatusBarEl.classList.add("muted");
+      return;
+    }
 
-  const socNumber = Number(data.soc);
-  const rangeNumber = Number(data.rangeKm);
-  const plugStatusNumber = Number(data.plugStatus);
-  const chargingStatusNumber = Number(data.chargingStatus);
+    const socNumber = Number(data.soc);
+    const rangeNumber = Number(data.rangeKm);
+    const plugStatusNumber = Number(data.plugStatus);
+    const chargingStatusNumber = Number(data.chargingStatus);
 
-  const batteryText = Number.isFinite(socNumber) ? `${socNumber}%` : "—";
-  const rangeText = Number.isFinite(rangeNumber) ? `${rangeNumber} km` : "—";
+    const batteryText = Number.isFinite(socNumber) ? `${socNumber}%` : "—";
+    const rangeText = Number.isFinite(rangeNumber) ? `${rangeNumber} km` : "—";
 
-  const plugLabel = data.plugLabel || "";
-  const chargingLabel = data.chargingLabel || "";
-const chargeMode = data.chargeMode || "";
-const chargeTimeStart = data.chargeTimeStart || "";
+    const plugLabel = data.plugLabel || "";
+    const chargingLabel = data.chargingLabel || "";
+    const chargeMode = data.chargeMode || "";
+    const chargeTimeStart = data.chargeTimeStart || "";
+    const chargingRemainingTime = Number(data.chargingRemainingTime);
 
+    const isScheduled =
+      /scheduled/i.test(chargeMode) ||
+      chargingStatusNumber === 0.3 ||
+      /programada/i.test(chargingLabel);
 
-const isScheduled =
-  /scheduled/i.test(chargeMode) ||
-  chargingStatusNumber === 0.3 ||
-  /programada/i.test(chargingLabel);
+    const isCharging =
+      chargingStatusNumber === 1 ||
+      chargingStatusNumber === 1.0 ||
+      (
+        /cargando/i.test(chargingLabel) &&
+        !/no cargando/i.test(chargingLabel) &&
+        !/programada/i.test(chargingLabel)
+      );
 
-const isCharging =
-  chargingStatusNumber === 1 ||
-  chargingStatusNumber === 1.0 ||
-  (
-    /cargando/i.test(chargingLabel) &&
-    !/no cargando/i.test(chargingLabel) &&
-    !/programada/i.test(chargingLabel)
-  );
+    const isPlugged =
+      plugStatusNumber === 1 ||
+      (
+        /enchufado/i.test(plugLabel) &&
+        !/desenchufado/i.test(plugLabel)
+      );
 
-const isPlugged =
-  plugStatusNumber === 1 ||
-  (
-    /enchufado/i.test(plugLabel) &&
-    !/desenchufado/i.test(plugLabel)
-  );
+    renderHeroChargeDetail({
+      isPlugged,
+      isCharging,
+      isScheduled,
+      chargeTimeStart,
+      chargingRemainingTime
+    });
 
-  let statusClass = "status-state-off";
-  let statusIcon = "⛔";
-  let statusText = "Desenchufado · No cargando";
+    let statusClass = "status-state-off";
+    let statusIcon = "⛔";
+    let statusText = "Desenchufado · No cargando";
 
-  if (isCharging) {
-    statusClass = "status-state-charging";
-    statusIcon = "⚡";
-    statusText = [plugLabel, chargingLabel].filter(Boolean).join(" · ") || "Cargando";
-  }  else if (isPlugged) {
-  statusClass = "status-state-plugged";
-  statusIcon = "🔌";
+    if (isCharging) {
+      statusClass = "status-state-charging";
+      statusIcon = "⚡";
+      statusText = [plugLabel, chargingLabel].filter(Boolean).join(" · ") || "Cargando";
+    } else if (isPlugged) {
+      statusClass = "status-state-plugged";
+      statusIcon = "🔌";
 
-  const isScheduled =
-    /scheduled/i.test(chargeMode) ||
-    chargingStatusNumber === 0.3 ||
-    /programada/i.test(chargingLabel);
+      if (isScheduled) {
+        statusText = chargeTimeStart
+          ? `Enchufado · Carga programada ${chargeTimeStart}`
+          : "Enchufado · Carga programada";
+      } else {
+        statusText = [plugLabel, chargingLabel].filter(Boolean).join(" · ") || "Enchufado";
+      }
+    } else {
+      statusClass = "status-state-off";
+      statusIcon = "⛔";
+      statusText = [plugLabel, chargingLabel].filter(Boolean).join(" · ") || "Desenchufado · No cargando";
+    }
 
-  if (isScheduled) {
-    statusText = chargeTimeStart
-      ? `Enchufado · Carga programada ${chargeTimeStart}`
-      : "Enchufado · Carga programada";
-  } else {
-    statusText = [plugLabel, chargingLabel].filter(Boolean).join(" · ") || "Enchufado";
-  }
-}
- else {
-    statusClass = "status-state-off";
-    statusIcon = "⛔";
-    statusText = [plugLabel, chargingLabel].filter(Boolean).join(" · ") || "Desenchufado · No cargando";
-  }
+    const progressPercent = Number.isFinite(socNumber)
+      ? Math.max(0, Math.min(100, socNumber))
+      : 0;
 
-  const progressPercent = Number.isFinite(socNumber)
-    ? Math.max(0, Math.min(100, socNumber))
-    : 0;
-
-  const chargingProgressHtml = isCharging
-    ? `
+    const chargingProgressHtml = isCharging
+      ? `
       <div class="charging-progress-block">
         <div class="charging-progress-track">
           <div class="charging-progress-fill" style="width:${progressPercent}%"></div>
@@ -575,9 +634,9 @@ const isPlugged =
         <small class="charging-progress-text">Carga actual: ${progressPercent}%</small>
       </div>
     `
-    : "";
+      : "";
 
-  vehicleStatusBarEl.innerHTML = `
+    vehicleStatusBarEl.innerHTML = `
     <article class="vehicle-status-card">
       <span>Batería actual</span>
       <strong>${batteryText}</strong>
@@ -598,14 +657,17 @@ const isPlugged =
     </article>
   `;
 
-  vehicleStatusBarEl.classList.remove("muted");
-}
+    vehicleStatusBarEl.classList.remove("muted");
+  }
 
-  async function fetchVehicleStatus() {
+    async function fetchVehicleStatus() {
     if (!vehicleStatusBarEl) return;
 
     try {
-      renderVehicleStatus(lastVehicleStatus, lastVehicleStatus ? vehicleStatusBarEl.textContent : "Actualizando datos del coche…");
+      renderVehicleStatus(
+        lastVehicleStatus,
+        lastVehicleStatus ? vehicleStatusBarEl.textContent : "Actualizando datos del coche…"
+      );
 
       const { data, error } = await supabase.auth.getSession();
       if (error) throw error;
@@ -626,15 +688,37 @@ const isPlugged =
 
       const status = await response.json();
       lastVehicleStatus = status;
+
+      try {
+        localStorage.setItem("lastVehicleStatus", JSON.stringify(status));
+      } catch {
+        // Si el navegador bloquea localStorage, simplemente seguimos sin persistir.
+      }
+
       renderVehicleStatus(status);
       renderHero();
     } catch (err) {
       console.error("Error consultando estado del coche:", err);
-      renderVehicleStatus(lastVehicleStatus, "Datos del coche no disponibles");
+
+      let storedStatus = null;
+
+      try {
+        storedStatus = JSON.parse(localStorage.getItem("lastVehicleStatus") || "null");
+      } catch {
+        storedStatus = null;
+      }
+
+      const fallbackStatus = lastVehicleStatus || storedStatus;
+      renderVehicleStatus(fallbackStatus, "Datos del coche no disponibles");
+
+      if (fallbackStatus) {
+        lastVehicleStatus = fallbackStatus;
+        renderHero();
+      }
     }
   }
 
-  function startVehicleStatusAutoRefresh() {
+    function startVehicleStatusAutoRefresh() {
     stopVehicleStatusAutoRefresh();
 
     fetchVehicleStatus();
@@ -940,38 +1024,35 @@ const isPlugged =
     return totalDays / (sorted.length - 1);
   }
 
-function renderHero() {
-  const drivingTrips = getDrivingTrips(trips);
+    function renderHero() {
+    const drivingTrips = getDrivingTrips(trips);
 
-  const totalKm = drivingTrips.reduce((sum, t) => sum + t.kmTrip, 0);
-  const totalDrivingKwh = drivingTrips.reduce((sum, t) => sum + t.kwhUsed, 0);
-  const totalDrivingCost = drivingTrips.reduce((sum, t) => sum + t.cost, 0);
+    const totalKm = drivingTrips.reduce((sum, t) => sum + t.kmTrip, 0);
+    const totalDrivingKwh = drivingTrips.reduce((sum, t) => sum + t.kwhUsed, 0);
+    const totalDrivingCost = drivingTrips.reduce((sum, t) => sum + t.cost, 0);
 
-  const avg = safeAvg(totalDrivingKwh, totalKm);
-  const range = avg > 0 ? (BATTERY_KWH / avg) * 100 : 0;
-  const costPer100 = totalKm > 0 ? (totalDrivingCost / totalKm) * 100 : 0;
+    const avg = safeAvg(totalDrivingKwh, totalKm);
+    const range = avg > 0 ? (BATTERY_KWH / avg) * 100 : 0;
+    const costPer100 = totalKm > 0 ? (totalDrivingCost / totalKm) * 100 : 0;
 
-  // Odómetro:
-  // 1) Si MyRenault tiene dato, mostramos ese.
-  // 2) Si no, usamos el km fin del último trayecto guardado.
-  const sortedTrips = [...trips].sort(sortTrips);
-  const lastTrip = sortedTrips.length ? sortedTrips[sortedTrips.length - 1] : null;
+    const sortedTrips = [...trips].sort(sortTrips);
+    const lastTrip = sortedTrips.length ? sortedTrips[sortedTrips.length - 1] : null;
 
-  const vehicleOdo = Number(lastVehicleStatus?.odometerKm);
-  const lastTripOdo = lastTrip ? Number(lastTrip.kmEnd) : NaN;
+    const vehicleOdo = Number(lastVehicleStatus?.odometerKm);
+    const lastTripOdo = lastTrip ? Number(lastTrip.kmEnd) : NaN;
 
-  const odoToShow = Number.isFinite(vehicleOdo)
-    ? vehicleOdo
-    : lastTripOdo;
+    const odoToShow = Number.isFinite(vehicleOdo)
+      ? vehicleOdo
+      : lastTripOdo;
 
-  odoNowEl.textContent = Number.isFinite(odoToShow)
-    ? `${formatNumber(odoToShow, 1)} km`
-    : "—";
+    odoNowEl.textContent = Number.isFinite(odoToShow)
+      ? `${formatNumber(odoToShow, 1)} km`
+      : "—";
 
-  globalAvgEl.textContent = totalKm > 0 ? formatAvgCompact(avg) : "—";
-  realRangeEl.textContent = totalKm > 0 ? `${Math.round(range)} km` : "—";
-  costPer100El.textContent = totalKm > 0 ? formatEuro(costPer100) : "—";
-}
+    globalAvgEl.textContent = totalKm > 0 ? formatAvgCompact(avg) : "—";
+    realRangeEl.textContent = totalKm > 0 ? `${Math.round(range)} km` : "—";
+    costPer100El.textContent = totalKm > 0 ? formatEuro(costPer100) : "—";
+  }
 
   function renderSummary() {
     const totalKwh = trips.reduce((sum, t) => sum + t.kwhUsed, 0);

@@ -2328,3 +2328,61 @@ input::placeholder{
     border-left:none !important;
   }
 }
+
+
+/* ── Detalle de carga bajo el coche ── */
+.hero-car-stack{
+  display:flex;
+  flex-direction:column;
+  align-items:flex-end;
+  justify-content:center;
+  gap:8px;
+}
+
+.hero-charge-detail{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:6px;
+  max-width:280px;
+  padding:7px 11px;
+  border-radius:999px;
+  background:rgba(229,184,0,.08);
+  border:1px solid rgba(229,184,0,.18);
+  color:var(--text);
+  font-size:12px;
+  font-weight:700;
+  line-height:1.25;
+  white-space:nowrap;
+}
+
+.hero-charge-detail::before{
+  content:"⏱️";
+  font-size:13px;
+}
+
+@media (max-width:860px){
+  .hero-car-stack{
+    gap:6px;
+  }
+
+  .hero-charge-detail{
+    max-width:200px;
+    font-size:11px;
+    padding:6px 9px;
+  }
+}
+
+@media (max-width:640px){
+  .hero-car-stack{
+    align-items:flex-end;
+  }
+
+  .hero-charge-detail{
+    max-width:165px;
+    font-size:10px;
+    padding:5px 8px;
+    white-space:normal;
+    text-align:center;
+  }
+}
