@@ -598,6 +598,7 @@ function renderVehicleStatus(data, fallbackText = "Datos del coche no disponible
       const status = await response.json();
       lastVehicleStatus = status;
       renderVehicleStatus(status);
+      renderHero();
     } catch (err) {
       console.error("Error consultando estado del coche:", err);
       renderVehicleStatus(lastVehicleStatus, "Datos del coche no disponibles");
@@ -910,23 +911,38 @@ function renderVehicleStatus(data, fallbackText = "Datos del coche no disponible
     return totalDays / (sorted.length - 1);
   }
 
-  function renderHero() {
-    const drivingTrips = getDrivingTrips(trips);
+function renderHero() {
+  const drivingTrips = getDrivingTrips(trips);
 
-    const totalKm = drivingTrips.reduce((sum, t) => sum + t.kmTrip, 0);
-    const totalDrivingKwh = drivingTrips.reduce((sum, t) => sum + t.kwhUsed, 0);
-    const totalDrivingCost = drivingTrips.reduce((sum, t) => sum + t.cost, 0);
+  const totalKm = drivingTrips.reduce((sum, t) => sum + t.kmTrip, 0);
+  const totalDrivingKwh = drivingTrips.reduce((sum, t) => sum + t.kwhUsed, 0);
+  const totalDrivingCost = drivingTrips.reduce((sum, t) => sum + t.cost, 0);
 
-    const avg = safeAvg(totalDrivingKwh, totalKm);
-    const range = avg > 0 ? (BATTERY_KWH / avg) * 100 : 0;
-    const lastOdo = trips.length ? [...trips].sort(sortTrips)[trips.length - 1].kmEnd : 0;
-    const costPer100 = totalKm > 0 ? (totalDrivingCost / totalKm) * 100 : 0;
+  const avg = safeAvg(totalDrivingKwh, totalKm);
+  const range = avg > 0 ? (BATTERY_KWH / avg) * 100 : 0;
+  const costPer100 = totalKm > 0 ? (totalDrivingCost / totalKm) * 100 : 0;
 
-    odoNowEl.textContent = trips.length ? `${formatNumber(lastOdo, 1)} km` : "—";
-    globalAvgEl.textContent = totalKm > 0 ? formatAvgCompact(avg) : "—";
-    realRangeEl.textContent = totalKm > 0 ? `${Math.round(range)} km` : "—";
-    costPer100El.textContent = totalKm > 0 ? formatEuro(costPer100) : "—";
-  }
+  // Odómetro:
+  // 1) Si MyRenault tiene dato, mostramos ese.
+  // 2) Si no, usamos el km fin del último trayecto guardado.
+  const sortedTrips = [...trips].sort(sortTrips);
+  const lastTrip = sortedTrips.length ? sortedTrips[sortedTrips.length - 1] : null;
+
+  const vehicleOdo = Number(lastVehicleStatus?.odometerKm);
+  const lastTripOdo = lastTrip ? Number(lastTrip.kmEnd) : NaN;
+
+  const odoToShow = Number.isFinite(vehicleOdo)
+    ? vehicleOdo
+    : lastTripOdo;
+
+  odoNowEl.textContent = Number.isFinite(odoToShow)
+    ? `${formatNumber(odoToShow, 1)} km`
+    : "—";
+
+  globalAvgEl.textContent = totalKm > 0 ? formatAvgCompact(avg) : "—";
+  realRangeEl.textContent = totalKm > 0 ? `${Math.round(range)} km` : "—";
+  costPer100El.textContent = totalKm > 0 ? formatEuro(costPer100) : "—";
+}
 
   function renderSummary() {
     const totalKwh = trips.reduce((sum, t) => sum + t.kwhUsed, 0);
