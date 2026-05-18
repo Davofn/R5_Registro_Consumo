@@ -506,7 +506,8 @@ function renderVehicleStatus(data, fallbackText = "Datos del coche no disponible
 
   const plugLabel = data.plugLabel || "";
   const chargingLabel = data.chargingLabel || "";
-
+const chargeMode = data.chargeMode || "";
+const chargeTimeStart = data.chargeTimeStart || "";
   const isCharging =
     (chargingStatusNumber > 0) ||
     (/cargando/i.test(chargingLabel) && !/no cargando/i.test(chargingLabel));
@@ -523,10 +524,23 @@ function renderVehicleStatus(data, fallbackText = "Datos del coche no disponible
     statusClass = "status-state-charging";
     statusIcon = "⚡";
     statusText = [plugLabel, chargingLabel].filter(Boolean).join(" · ") || "Cargando";
-  } else if (isPlugged) {
-    statusClass = "status-state-plugged";
-    statusIcon = "🔌";
+  } } else if (isPlugged) {
+  statusClass = "status-state-plugged";
+  statusIcon = "🔌";
+
+  const isScheduled =
+    /scheduled/i.test(chargeMode) ||
+    chargingStatusNumber === 0.3 ||
+    /programada/i.test(chargingLabel);
+
+  if (isScheduled) {
+    statusText = chargeTimeStart
+      ? `Enchufado · Carga programada ${chargeTimeStart}`
+      : "Enchufado · Carga programada";
+  } else {
     statusText = [plugLabel, chargingLabel].filter(Boolean).join(" · ") || "Enchufado";
+  }
+}
   } else {
     statusClass = "status-state-off";
     statusIcon = "⛔";
