@@ -2127,3 +2127,204 @@ input::placeholder{
   .charging-progress-track{height:8px;}
   .charging-progress-text{font-size:.74rem;}
 }
+
+/* ═══════════════════════════════════════════════
+   V3 FINAL — escritorio mas legible e Insights compacto
+   Pegado al final para pisar reglas anteriores del dashboard.
+═══════════════════════════════════════════════ */
+
+@media (min-width:900px){
+  body{
+    font-size:17px;
+  }
+
+  .tab{
+    font-size:15px;
+    padding:17px 12px;
+  }
+
+  .tab-panel{
+    padding:24px 20px 26px;
+  }
+
+  .panel-card{
+    border-radius:18px;
+  }
+
+  .panel-head{
+    padding:17px 20px;
+  }
+
+  .panel-head h3{
+    font-size:14.5px;
+    letter-spacing:.55px;
+  }
+
+  .stat-row{
+    padding:18px 20px;
+  }
+
+  .stat-row span{
+    font-size:15.5px;
+    line-height:1.45;
+  }
+
+  .stat-row strong{
+    font-size:16.5px;
+    line-height:1.45;
+  }
+
+  .year-summary-toggle{
+    padding:13px 16px;
+  }
+
+  .year-summary-toggle span,
+  .year-summary-toggle strong{
+    font-size:15.5px;
+  }
+
+  label span,
+  .period-toolbar label span{
+    font-size:12.5px;
+  }
+
+  input,
+  select{
+    font-size:15.5px;
+    padding:13px 15px;
+  }
+
+  .history-toolbar .ghost,
+  .toggle-details,
+  .logout-btn{
+    font-size:14.5px;
+  }
+
+  .stint-title{
+    font-size:17px;
+  }
+
+  .stint-sub,
+  .stint-meta{
+    font-size:15px;
+  }
+
+  .trip-detail-date,
+  .trip-detail-line2 span{
+    font-size:15px;
+  }
+
+  .trip-detail-line2 small,
+  .trip-detail-soc,
+  .trip-detail-notes{
+    font-size:13px;
+  }
+}
+
+/* Insights: mas ancho util y sin cortes */
+@media (min-width:900px){
+  .insights-grid{
+    grid-template-columns:1.18fr .94fr .95fr;
+    gap:14px;
+    align-items:start;
+  }
+
+  #tab-insights .panel-card{
+    padding:0;
+    overflow:hidden;
+  }
+
+  #tab-insights .stats-list{
+    gap:0;
+  }
+
+  #monthlyInsights .monthly-detail-row,
+  #monthlyCosts .monthly-cost-row{
+    padding:16px 20px !important;
+    border-left:none;
+  }
+
+  #monthlyInsights .monthly-detail-row{
+    display:grid;
+    grid-template-columns:minmax(0,1fr) max-content;
+    align-items:center;
+    gap:18px;
+    min-height:62px;
+  }
+
+  #monthlyInsights .monthly-detail-row > span,
+  #monthlyCosts .monthly-cost-row > span{
+    padding-left:0;
+    font-size:15.5px;
+  }
+
+  #monthlyInsights .monthly-detail-row strong,
+  #monthlyCosts .monthly-cost-row strong{
+    text-align:right;
+    font-size:16px;
+  }
+
+  #typeInsights{
+    gap:0;
+  }
+
+  .type-insight-card{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    min-height:62px;
+    padding:16px 18px;
+    border:none;
+    border-bottom:1px solid rgba(255,255,255,.06);
+    border-radius:0;
+    background:transparent;
+    overflow:visible;
+  }
+
+  .type-insight-card:last-child{
+    border-bottom:none;
+  }
+
+  .type-insight-card::before{
+    content:none !important;
+    display:none !important;
+  }
+
+  .type-insight-name{
+    flex:0 0 92px;
+    min-width:92px;
+    padding-left:0 !important;
+    font-size:16.5px;
+    line-height:1.15;
+  }
+
+  .type-insight-metrics{
+    display:flex;
+    flex:1 1 auto;
+    min-width:0;
+    flex-wrap:wrap;
+    gap:8px 12px;
+  }
+
+  .type-insight-metrics span{
+    display:inline-flex;
+    align-items:center;
+    justify-content:flex-start;
+    min-width:0;
+    padding:0;
+    border:none;
+    border-radius:0;
+    background:transparent;
+    color:var(--text);
+    font-size:15.5px;
+    font-weight:750;
+    line-height:1.25;
+    white-space:nowrap;
+  }
+
+  .type-insight-city,
+  .type-insight-mixed,
+  .type-insight-highway{
+    border-left:none !important;
+  }
+}
