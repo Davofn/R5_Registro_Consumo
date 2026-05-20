@@ -36,7 +36,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const realRangeEl = document.getElementById("realRange");
   const costPer100El = document.getElementById("costPer100");
   const vehicleStatusBarEl = document.getElementById("vehicleStatusBar");
-  const heroChargeDetailEl = document.getElementById("heroChargeDetail");
 
   // SUMMARY
   const totalKwhEl = document.getElementById("totalKwh");
@@ -208,28 +207,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function formatDays(value) {
     return Number.isFinite(value) ? `${formatNumber(value, 1)} días` : "—";
-  }
-
-  function formatMinutesToHours(minutes) {
-    const totalMinutes = Number(minutes);
-
-    if (!Number.isFinite(totalMinutes) || totalMinutes <= 0) {
-      return "";
-    }
-
-    const rounded = Math.round(totalMinutes);
-    const hours = Math.floor(rounded / 60);
-    const mins = rounded % 60;
-
-    if (hours > 0 && mins > 0) {
-      return `${hours} h ${mins} min`;
-    }
-
-    if (hours > 0) {
-      return `${hours} h`;
-    }
-
-    return `${mins} min`;
   }
 
   function safeAvg(totalKwh, totalKm) {
@@ -491,88 +468,11 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  function estimateChargingPowerKw({ soc, chargingRemainingTime }) {
-    const socNumber = Number(soc);
-    const remainingMinutes = Number(chargingRemainingTime);
+function renderVehicleStatus(data, fallbackText = "Datos del coche no disponibles") {
+  if (!vehicleStatusBarEl) return;
 
-    // Kelec parece estimar la potencia hasta el 80%, no hasta el 100%.
-    const TARGET_SOC = 80;
-
-    if (
-      !Number.isFinite(socNumber) ||
-      !Number.isFinite(remainingMinutes) ||
-      socNumber < 0 ||
-      socNumber >= TARGET_SOC ||
-      remainingMinutes <= 0
-    ) {
-      return NaN;
-    }
-
-    const remainingKwh = BATTERY_KWH * ((TARGET_SOC - socNumber) / 100);
-    const remainingHours = remainingMinutes / 60;
-
-    return remainingKwh / remainingHours;
-  }
-
-  function renderHeroChargeDetail({
-    isPlugged,
-    isCharging,
-    isScheduled,
-    chargeTimeStart,
-    chargingRemainingTime,
-    chargingPowerKw,
-    soc
-  }) {
-    if (!heroChargeDetailEl) return;
-
-    const remainingText = formatMinutesToHours(chargingRemainingTime);
-    const realPowerKw = Number(chargingPowerKw);
-    const estimatedPowerKw = estimateChargingPowerKw({ soc, chargingRemainingTime });
-
-    const powerText = Number.isFinite(realPowerKw) && realPowerKw > 0
-      ? `${formatNumber(realPowerKw, 1)} kW`
-      : Number.isFinite(estimatedPowerKw) && estimatedPowerKw > 0
-        ? `~${formatNumber(estimatedPowerKw, 1)} kW`
-        : "";
-
-    const parts = [];
-
-    if (isScheduled && chargeTimeStart) {
-      parts.push(`Inicio ${chargeTimeStart}`);
-    } else if (isCharging) {
-      parts.push("Cargando ahora");
-    } else if (isPlugged) {
-      parts.push("Enchufado");
-    }
-
-    if (remainingText) {
-      parts.push(`restante ${remainingText}`);
-    }
-
-    if (powerText) {
-      parts.push(powerText);
-    }
-
-    if (!parts.length) {
-      heroChargeDetailEl.classList.add("hidden");
-      heroChargeDetailEl.textContent = "";
-      return;
-    }
-
-    heroChargeDetailEl.textContent = parts.join(" · ");
-    heroChargeDetailEl.classList.remove("hidden");
-  }
-
-  function renderVehicleStatus(data, fallbackText = "Datos del coche no disponibles") {
-    if (!vehicleStatusBarEl) return;
-
-    if (!data) {
-      if (heroChargeDetailEl) {
-        heroChargeDetailEl.classList.add("hidden");
-        heroChargeDetailEl.textContent = "";
-      }
-
-      vehicleStatusBarEl.innerHTML = `
+  if (!data) {
+    vehicleStatusBarEl.innerHTML = `
       <article class="vehicle-status-card">
         <span>Batería actual</span>
         <strong>—</strong>
@@ -592,87 +492,53 @@ document.addEventListener("DOMContentLoaded", () => {
       </article>
     `;
 
-      vehicleStatusBarEl.classList.add("muted");
-      return;
-    }
+    vehicleStatusBarEl.classList.add("muted");
+    return;
+  }
 
-    const socNumber = Number(data.soc);
-    const rangeNumber = Number(data.rangeKm);
-    const plugStatusNumber = Number(data.plugStatus);
-    const chargingStatusNumber = Number(data.chargingStatus);
+  const socNumber = Number(data.soc);
+  const rangeNumber = Number(data.rangeKm);
+  const plugStatusNumber = Number(data.plugStatus);
+  const chargingStatusNumber = Number(data.chargingStatus);
 
-    const batteryText = Number.isFinite(socNumber) ? `${socNumber}%` : "—";
-    const rangeText = Number.isFinite(rangeNumber) ? `${rangeNumber} km` : "—";
+  const batteryText = Number.isFinite(socNumber) ? `${socNumber}%` : "—";
+  const rangeText = Number.isFinite(rangeNumber) ? `${rangeNumber} km` : "—";
 
-    const plugLabel = data.plugLabel || "";
-    const chargingLabel = data.chargingLabel || "";
-    const chargeMode = data.chargeMode || "";
-    const chargeTimeStart = data.chargeTimeStart || "";
-    const chargingRemainingTime = Number(data.chargingRemainingTime);
-    const chargingPowerKw = Number(data.chargingPowerKw);
+  const plugLabel = data.plugLabel || "";
+  const chargingLabel = data.chargingLabel || "";
 
-    const isScheduled =
-      /scheduled/i.test(chargeMode) ||
-      chargingStatusNumber === 0.3 ||
-      /programada/i.test(chargingLabel);
+  const isCharging =
+    (chargingStatusNumber > 0) ||
+    (/cargando/i.test(chargingLabel) && !/no cargando/i.test(chargingLabel));
 
-    const isCharging =
-      chargingStatusNumber === 1 ||
-      chargingStatusNumber === 1.0 ||
-      (
-        /cargando/i.test(chargingLabel) &&
-        !/no cargando/i.test(chargingLabel) &&
-        !/programada/i.test(chargingLabel)
-      );
+  const isPlugged =
+    (plugStatusNumber > 0) ||
+    (/enchufado/i.test(plugLabel) && !/desenchufado/i.test(plugLabel));
 
-    const isPlugged =
-      plugStatusNumber === 1 ||
-      (
-        /enchufado/i.test(plugLabel) &&
-        !/desenchufado/i.test(plugLabel)
-      );
+  let statusClass = "status-state-off";
+  let statusIcon = "⛔";
+  let statusText = "Desenchufado · No cargando";
 
-    renderHeroChargeDetail({
-      isPlugged,
-      isCharging,
-      isScheduled,
-      chargeTimeStart,
-      chargingRemainingTime,
-      chargingPowerKw,
-      soc: socNumber
-    });
+  if (isCharging) {
+    statusClass = "status-state-charging";
+    statusIcon = "⚡";
+    statusText = [plugLabel, chargingLabel].filter(Boolean).join(" · ") || "Cargando";
+  } else if (isPlugged) {
+    statusClass = "status-state-plugged";
+    statusIcon = "🔌";
+    statusText = [plugLabel, chargingLabel].filter(Boolean).join(" · ") || "Enchufado";
+  } else {
+    statusClass = "status-state-off";
+    statusIcon = "⛔";
+    statusText = [plugLabel, chargingLabel].filter(Boolean).join(" · ") || "Desenchufado · No cargando";
+  }
 
-    let statusClass = "status-state-off";
-    let statusIcon = "⛔";
-    let statusText = "Desenchufado · No cargando";
+  const progressPercent = Number.isFinite(socNumber)
+    ? Math.max(0, Math.min(100, socNumber))
+    : 0;
 
-    if (isCharging) {
-      statusClass = "status-state-charging";
-      statusIcon = "⚡";
-      statusText = [plugLabel, chargingLabel].filter(Boolean).join(" · ") || "Cargando";
-    } else if (isPlugged) {
-      statusClass = "status-state-plugged";
-      statusIcon = "🔌";
-
-      if (isScheduled) {
-        statusText = chargeTimeStart
-          ? `Enchufado · Carga programada ${chargeTimeStart}`
-          : "Enchufado · Carga programada";
-      } else {
-        statusText = [plugLabel, chargingLabel].filter(Boolean).join(" · ") || "Enchufado";
-      }
-    } else {
-      statusClass = "status-state-off";
-      statusIcon = "⛔";
-      statusText = [plugLabel, chargingLabel].filter(Boolean).join(" · ") || "Desenchufado · No cargando";
-    }
-
-    const progressPercent = Number.isFinite(socNumber)
-      ? Math.max(0, Math.min(100, socNumber))
-      : 0;
-
-    const chargingProgressHtml = isCharging
-      ? `
+  const chargingProgressHtml = isCharging
+    ? `
       <div class="charging-progress-block">
         <div class="charging-progress-track">
           <div class="charging-progress-fill" style="width:${progressPercent}%"></div>
@@ -680,9 +546,9 @@ document.addEventListener("DOMContentLoaded", () => {
         <small class="charging-progress-text">Carga actual: ${progressPercent}%</small>
       </div>
     `
-      : "";
+    : "";
 
-    vehicleStatusBarEl.innerHTML = `
+  vehicleStatusBarEl.innerHTML = `
     <article class="vehicle-status-card">
       <span>Batería actual</span>
       <strong>${batteryText}</strong>
@@ -703,17 +569,14 @@ document.addEventListener("DOMContentLoaded", () => {
     </article>
   `;
 
-    vehicleStatusBarEl.classList.remove("muted");
-  }
+  vehicleStatusBarEl.classList.remove("muted");
+}
 
-    async function fetchVehicleStatus() {
+  async function fetchVehicleStatus(forceRefresh = false) {
     if (!vehicleStatusBarEl) return;
 
     try {
-      renderVehicleStatus(
-        lastVehicleStatus,
-        lastVehicleStatus ? vehicleStatusBarEl.textContent : "Actualizando datos del coche…"
-      );
+      renderVehicleStatus(lastVehicleStatus, lastVehicleStatus ? vehicleStatusBarEl.textContent : "Actualizando datos del coche…");
 
       const { data, error } = await supabase.auth.getSession();
       if (error) throw error;
@@ -721,7 +584,12 @@ document.addEventListener("DOMContentLoaded", () => {
       const token = data?.session?.access_token;
       if (!token) throw new Error("No hay token de Supabase.");
 
-      const response = await fetch(`${RENAULT_BACKEND_URL}/renault/status`, {
+      // Con forceRefresh=true se salta el caché del backend y consulta MyRenault directamente
+      const url = forceRefresh
+        ? `${RENAULT_BACKEND_URL}/renault/status?refresh=true`
+        : `${RENAULT_BACKEND_URL}/renault/status`;
+
+      const response = await fetch(url, {
         method: "GET",
         headers: {
           "Authorization": `Bearer ${token}`
@@ -734,50 +602,47 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const status = await response.json();
       lastVehicleStatus = status;
-
-      try {
-        localStorage.setItem("lastVehicleStatus", JSON.stringify(status));
-      } catch {
-        // Si el navegador bloquea localStorage, simplemente seguimos sin persistir.
-      }
-
+      window._lastVehicleRaw = status; // expuesto para sincronización del hero
       renderVehicleStatus(status);
-      renderHero();
     } catch (err) {
       console.error("Error consultando estado del coche:", err);
-
-      let storedStatus = null;
-
-      try {
-        storedStatus = JSON.parse(localStorage.getItem("lastVehicleStatus") || "null");
-      } catch {
-        storedStatus = null;
-      }
-
-      const fallbackStatus = lastVehicleStatus || storedStatus;
-      renderVehicleStatus(fallbackStatus, "Datos del coche no disponibles");
-
-      if (fallbackStatus) {
-        lastVehicleStatus = fallbackStatus;
-        renderHero();
-      }
+      renderVehicleStatus(lastVehicleStatus, "Datos del coche no disponibles");
     }
   }
 
-    function startVehicleStatusAutoRefresh() {
+  function startVehicleStatusAutoRefresh() {
     stopVehicleStatusAutoRefresh();
 
-    fetchVehicleStatus();
+    // Al abrir: forzar datos frescos de MyRenault (ignora caché del backend)
+    fetchVehicleStatus(true);
 
+    // Refresco automático cada 5 minutos usando caché normal
     vehicleStatusTimer = setInterval(() => {
-      fetchVehicleStatus();
+      fetchVehicleStatus(false);
     }, 5 * 60 * 1000);
+
+    // Al volver a la pestaña tras más de 5 min fuera → forzar refresco
+    document.addEventListener("visibilitychange", _onVisibilityChange);
   }
 
   function stopVehicleStatusAutoRefresh() {
     if (vehicleStatusTimer) {
       clearInterval(vehicleStatusTimer);
       vehicleStatusTimer = null;
+    }
+    document.removeEventListener("visibilitychange", _onVisibilityChange);
+  }
+
+  let _lastVisibleAt = Date.now();
+  function _onVisibilityChange() {
+    if (document.visibilityState === "hidden") {
+      _lastVisibleAt = Date.now();
+    } else if (document.visibilityState === "visible") {
+      const awayMs = Date.now() - _lastVisibleAt;
+      // Si han pasado más de 5 minutos fuera → forzar refresco real
+      if (awayMs > 5 * 60 * 1000) {
+        fetchVehicleStatus(true);
+      }
     }
   }
 
@@ -1070,7 +935,7 @@ document.addEventListener("DOMContentLoaded", () => {
     return totalDays / (sorted.length - 1);
   }
 
-    function renderHero() {
+  function renderHero() {
     const drivingTrips = getDrivingTrips(trips);
 
     const totalKm = drivingTrips.reduce((sum, t) => sum + t.kmTrip, 0);
@@ -1079,22 +944,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const avg = safeAvg(totalDrivingKwh, totalKm);
     const range = avg > 0 ? (BATTERY_KWH / avg) * 100 : 0;
+    const lastOdo = trips.length ? [...trips].sort(sortTrips)[trips.length - 1].kmEnd : 0;
     const costPer100 = totalKm > 0 ? (totalDrivingCost / totalKm) * 100 : 0;
 
-    const sortedTrips = [...trips].sort(sortTrips);
-    const lastTrip = sortedTrips.length ? sortedTrips[sortedTrips.length - 1] : null;
-
-    const vehicleOdo = Number(lastVehicleStatus?.odometerKm);
-    const lastTripOdo = lastTrip ? Number(lastTrip.kmEnd) : NaN;
-
-    const odoToShow = Number.isFinite(vehicleOdo)
-      ? vehicleOdo
-      : lastTripOdo;
-
-    odoNowEl.textContent = Number.isFinite(odoToShow)
-      ? `${formatNumber(odoToShow, 1)} km`
-      : "—";
-
+    odoNowEl.textContent = trips.length ? `${formatNumber(lastOdo, 1)} km` : "—";
     globalAvgEl.textContent = totalKm > 0 ? formatAvgCompact(avg) : "—";
     realRangeEl.textContent = totalKm > 0 ? `${Math.round(range)} km` : "—";
     costPer100El.textContent = totalKm > 0 ? formatEuro(costPer100) : "—";
