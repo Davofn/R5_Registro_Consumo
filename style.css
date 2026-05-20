@@ -2354,3 +2354,79 @@ input::placeholder{
     font-size:10px;
   }
 }
+/* ═══════════════════════════════════════════════
+   INSIGHTS MÓVIL — limpiar Uso, eficiencia y autonomía
+═══════════════════════════════════════════════ */
+
+@media (max-width:899px){
+  #typeInsights{
+    gap:0;
+  }
+
+  #typeInsights .stat-row{
+    display:none;
+  }
+
+  .type-insight-card{
+    display:grid;
+    grid-template-columns:88px minmax(0, 1fr);
+    align-items:center;
+    gap:10px;
+    padding:14px 16px;
+    border:none;
+    border-bottom:1px solid rgba(255,255,255,.06);
+    border-radius:0;
+    background:transparent;
+  }
+
+  .type-insight-card:last-child{
+    border-bottom:none;
+  }
+
+  .type-insight-name{
+    min-width:0;
+    font-size:15px;
+    font-weight:800;
+    line-height:1.2;
+  }
+
+  .type-insight-metrics{
+    display:flex;
+    flex-wrap:wrap;
+    justify-content:flex-end;
+    gap:6px 10px;
+    min-width:0;
+  }
+
+  .type-insight-metrics span{
+    display:inline;
+    min-width:0;
+    padding:0;
+    border:none;
+    border-radius:0;
+    background:transparent;
+    color:var(--text);
+    font-size:13px;
+    font-weight:700;
+    line-height:1.25;
+    white-space:nowrap;
+  }
+
+  .type-insight-city,
+  .type-insight-mixed,
+  .type-insight-highway{
+    border-left:none !important;
+  }
+
+  .type-insight-city .type-insight-name{
+    color:#86efac;
+  }
+
+  .type-insight-mixed .type-insight-name{
+    color:#fde68a;
+  }
+
+  .type-insight-highway .type-insight-name{
+    color:#93c5fd;
+  }
+}
